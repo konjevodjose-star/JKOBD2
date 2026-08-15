@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AutoScan AI Pro - Ultimate Crossfox</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { brand: { 50: '#f0f9ff', 500: '#0284c7', 600: '#0369a1', 950: '#082f49' } } } }
+    }
+  </script>
+  <!-- Icons Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,600&family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+    .font-display { font-family: 'Chakra Petch', sans-serif; }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .glow-cyan { filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4)); }
+    .glow-amber { filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4)); }
+    .glow-red { filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4)); }
+    .glow-health { filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); }
+
+    .needle-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .needle-sweep { transition: transform 1.2s cubic-bezier(0.8, 0, 0.2, 1) !important; }
+    .list-enter { animation: slideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; transform: translateX(-20px); }
+    @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+
+    .status-dot-green { box-shadow: 0 0 8px rgba(16, 185, 129, 0.8); background-color: #10b981; }
+    .status-dot-yellow { box-shadow: 0 0 8px rgba(245, 158, 11, 0.8); background-color: #f59e0b; }
+    .status-dot-red { box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); background-color: #ef4444; }
+    .status-dot-gray { box-shadow: 0 0 8px rgba(100, 116, 139, 0.5); background-color: #64748b; }
+
+    .chk-rpm { accent-color: #38bdf8; } .chk-speed { accent-color: #10b981; } .chk-coolant { accent-color: #f43f5e; }
+    .chk-voltage { accent-color: #f59e0b; } .chk-load { accent-color: #8b5cf6; } .chk-tps { accent-color: #ec4899; }
+    .chk-pedal { accent-color: #eab308; } .chk-avance { accent-color: #0ea5e9; } .chk-map { accent-color: #f97316; }
+    .chk-maf { accent-color: #14b8a6; } .chk-o2 { accent-color: #a855f7; } .chk-stft { accent-color: #f43f5e; }
+    .chk-ltft { accent-color: #d97706; } .chk-hp { accent-color: #6366f1; } .chk-torque { accent-color: #d946ef; }
+    .chk-ve { accent-color: #8b5cf6; } .chk-afr { accent-color: #06b6d4; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden transition-colors duration-300 relative">
+
+  <!-- MODAL DE USUARIO -->
+  <div id="user-modal" class="fixed inset-0 bg-slate-950/95 z-[60] flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl w-11/12 max-w-sm">
+      <div class="flex items-center justify-center mb-4">
+        <div class="bg-sky-500/20 p-3 rounded-full"><i data-lucide="user-check" class="w-8 h-8 text-sky-400"></i></div>
+      </div>
+      <h2 class="text-xl font-display font-bold text-center text-white mb-2">Seleccionar Perfil</h2>
+      <p class="text-[11px] text-slate-400 text-center mb-4 font-mono-tech">Selecciona un usuario existente o crea uno nuevo. Tus tests y sesiones se vincularán a este perfil.</p>
+      
+      <div class="space-y-3 mb-4">
+        <div>
+          <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Usuarios Guardados:</label>
+          <select id="select-existing-user" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-sky-500 transition font-bold text-center appearance-none">
+            <option value="demo">Modo Demostración (Sin Guardar)</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2"><div class="h-px bg-slate-800 flex-1"></div><span class="text-[10px] text-slate-500 font-bold">O CREAR NUEVO</span><div class="h-px bg-slate-800 flex-1"></div></div>
+        <input type="text" id="input-username" placeholder="Ej: Juan - Crossfox" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-sky-500 transition font-bold text-center">
+      </div>
+      <button id="btn-login" onclick="loginUser()" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-sky-600/20">ACCEDER AL ESCÁNER</button>
+    </div>
+  </div>
+
+  <!-- BANNER DE REPETICIÓN -->
+  <div id="replay-banner" class="hidden w-full bg-amber-500 text-slate-950 text-xs font-bold font-mono-tech text-center py-1.5 animate-pulse z-50">
+    <i data-lucide="play-circle" class="w-3 h-3 inline mr-1"></i> MODO REPETICIÓN DE VIAJE ACTIVO - DATOS GRABADOS
+    <button onclick="stopReplay()" class="ml-3 underline hover:text-white">DETENER</button>
+  </div>
+
+  <!-- CABECERA -->
+  <header class="bg-slate-900 border-b border-slate-800 px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between z-30 shadow-lg shrink-0 relative">
+    <div class="flex items-center space-x-2.5">
+      <div class="relative flex items-center justify-center">
+        <div id="status-dot" class="w-3 h-3 rounded-full bg-rose-500"></div>
+        <div id="status-ping" class="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75"></div>
+      </div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="font-display font-extrabold text-sm sm:text-base tracking-wider text-white">AUTOSCAN <span class="text-sky-400">AI PRO</span></h1>
+          <span class="text-[9px] font-mono-tech bg-sky-950 text-sky-400 border border-sky-500/30 px-1.5 py-0.2 rounded font-bold">CROSSFOX V2</span>
+        </div>
+        <p id="connection-status-text" class="text-[10px] sm:text-[11px] text-slate-400 font-mono-tech flex items-center gap-1">
+          Desconectado | Perfil: <select id="header-profile-select" onchange="switchProfileHeader(this.value)" class="bg-transparent text-sky-400 font-bold outline-none cursor-pointer"><option value="demo">Demo</option></select>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-1.5 sm:space-x-2">
+      <button id="btn-voice-toggle" onclick="toggleVoiceAssistance()" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700 flex items-center" title="Asistente de Voz">
+        <i data-lucide="volume-2" id="voice-icon" class="w-4 h-4 text-sky-400"></i>
+      </button>
+      <button id="btn-sweep" onclick="triggerNeedleSweep()" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700 flex items-center" title="Test de Agujas">
+        <i data-lucide="power" class="w-4 h-4 text-emerald-400"></i>
+      </button>
+      <button id="btn-demo" onclick="toggleDemoMode()" class="px-2 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 rounded-lg transition flex items-center gap-1 font-mono-tech">
+        <i data-lucide="play-circle" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">SIMULADOR</span>
+      </button>
+      <button id="btn-connect" onclick="toggleConnectRealBluetooth()" class="px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg shadow-lg shadow-sky-600/20 transition flex items-center gap-1.5 font-mono-tech">
+        <i data-lucide="bluetooth" class="w-4 h-4"></i><span id="btn-connect-text" class="hidden sm:inline">CONECTAR</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- BANNER AI -->
+  <div id="ai-alert-banner" class="fixed top-14 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 -translate-y-10 opacity-0 invisible w-11/12 max-w-lg cursor-pointer" onclick="switchTab('health')">
+    <div class="bg-rose-950/95 border border-rose-600 p-3 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(225,29,72,0.5)] backdrop-blur-md">
+      <div class="bg-rose-500 p-2 rounded-lg animate-pulse"><i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i></div>
+      <div class="flex-1">
+        <h4 class="text-[10px] font-bold font-mono-tech text-rose-300 uppercase tracking-widest">Alerta Predictiva IA</h4>
+        <p id="ai-alert-text" class="text-xs font-semibold text-white mt-0.5 line-clamp-2">Evaluando anomalías...</p>
+        <p class="text-[9px] text-rose-200 mt-1 flex items-center gap-1"><i data-lucide="activity" class="w-3 h-3"></i> Tocar para ver detalles en Salud</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast-container" class="fixed top-14 left-3 right-3 sm:left-4 sm:right-4 z-50 transition-all duration-300 transform -translate-y-20 opacity-0 invisible flex justify-center pointer-events-none">
+    <div class="p-3 rounded-xl border border-slate-700 bg-slate-900/95 text-xs flex items-center shadow-2xl backdrop-blur-md pointer-events-auto max-w-md w-full">
+      <i id="toast-icon" data-lucide="info" class="w-4 h-4 mr-2 text-sky-400"></i>
+      <span id="toast-text" class="font-medium text-white flex-1">Mensaje del sistema</span>
+    </div>
+  </div>
+
+  <main class="flex-1 overflow-y-auto p-3 sm:p-4 no-scrollbar pb-24 space-y-4 max-w-7xl mx-auto w-full relative z-10">
+
+    <!-- ==================== 1. DASHBOARD ==================== -->
+    <section id="tab-dashboard" class="tab-content space-y-4">
+      
+      <!-- HEALTH SCORE -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] group w-full">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800/20 via-slate-950/80 to-slate-950 z-0"></div>
+        <div class="absolute top-4 left-5 flex items-center gap-1.5 z-10">
+          <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i><span class="text-[10px] font-mono-tech uppercase tracking-widest text-slate-400 font-bold">Estado del Vehículo</span>
+        </div>
+        <div class="relative w-full max-w-[320px] aspect-square z-10 mt-6 mb-2">
+          <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-2xl glow-health">
+            <path d="M 20.30 79.70 A 42 42 0 0 1 11.20 33.95" fill="none" stroke="#ef4444" stroke-width="11" stroke-linecap="butt"/>
+            <path d="M 11.20 33.95 A 42 42 0 0 1 50.00 8.00" fill="none" stroke="#f97316" stroke-width="11" stroke-linecap="butt"/>
+            <path d="M 50.00 8.00 A 42 42 0 0 1 88.80 33.95" fill="none" stroke="#a3e635" stroke-width="11" stroke-linecap="butt"/>
+            <path d="M 88.80 33.95 A 42 42 0 0 1 79.70 79.70" fill="none" stroke="#16a34a" stroke-width="11" stroke-linecap="butt"/>
+            <path d="M 79.70 79.70 A 42 42 0 0 1 20.30 79.70" fill="none" stroke="#1e293b" stroke-width="11" stroke-linecap="butt" class="opacity-50"/>
+            <g font-size="5" font-weight="600" fill="#ffffff" text-anchor="middle" dominant-baseline="central" class="font-sans opacity-90 drop-shadow-md">
+              <text x="22" y="58">Fallo</text><text x="32" y="25">Revisar</text><text x="68" y="25">Óptimo</text><text x="78" y="58">Excelente</text>
+            </g>
+            <circle cx="50" cy="50" r="15" fill="#020617" stroke="#1e293b" stroke-width="1.5" />
+            <circle cx="50" cy="50" r="8" fill="#0f172a" />
+            <g id="needle-health" class="needle-transition" style="transform-origin: 50px 50px; transform: rotate(135deg);">
+              <polygon points="48,50 52,50 50,15" fill="#38bdf8" /><polygon points="49.5,50 50.5,50 50,16" fill="#bae6fd" /><circle cx="50" cy="50" r="4" fill="#38bdf8" /><circle cx="50" cy="50" r="1.5" fill="#020617"/>
+            </g>
+          </svg>
+          <div class="absolute inset-x-0 bottom-6 flex flex-col items-center justify-center">
+            <span id="health-status-text" class="text-lg font-display font-bold text-emerald-400 tracking-wider shadow-black drop-shadow-xl uppercase">Excelente</span>
+            <span id="health-score-val" class="text-[10px] font-mono-tech text-slate-400">Score: 100/100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS DE LÍNEA BASE -->
+      <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="git-commit" class="w-4 h-4 text-indigo-400"></i><span>Línea Base: <strong id="baseline-name" class="text-indigo-400 font-mono-tech">Ninguna seleccionada</strong></span>
+        </div>
+        <button onclick="switchTab('sessions')" class="text-sky-400 font-mono-tech hover:underline text-[11px]">Gestionar</button>
+      </div>
+
+      <!-- GAUGES PRINCIPALES -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-[inset_0_0_30px_rgba(0,0,0,0.6)] group">
+          <div class="absolute top-4 left-5 flex items-center gap-1.5 z-10"><i data-lucide="gauge" class="w-4 h-4 text-amber-500"></i><span class="text-[10px] font-mono-tech uppercase tracking-widest text-slate-400 font-bold">Tacómetro</span></div>
+          <div class="relative w-full max-w-[280px] aspect-square z-10 mt-4">
+            <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-2xl">
+              <path d="M 15.4 70 A 40 40 0 1 1 84.6 70" fill="none" stroke="#1e293b" stroke-width="16" stroke-linecap="butt"/>
+              <g font-size="7" font-weight="bold" font-style="italic" fill="#0f172a" text-anchor="middle" dominant-baseline="central" class="font-display">
+                <text x="15.4" y="70">0</text><text x="10.6" y="43.1">1</text><text x="24.3" y="19.4">2</text><text x="50.0" y="10">3</text><text x="75.7" y="19.4">4</text><text x="89.4" y="43.1">5</text><text x="84.6" y="70">6</text>
+              </g>
+              <g id="needle-rpm" class="needle-transition" style="transform-origin: 50px 50px; transform: rotate(-120deg);">
+                <polygon points="48.5,50 51.5,50 50,15" fill="#ef4444" /><circle cx="50" cy="50" r="5" fill="#020617" stroke="#ef4444" stroke-width="1.5"/>
+              </g>
+            </svg>
+            <div class="absolute right-0 top-[22%] bottom-[22%] w-[48%] bg-slate-950/85 backdrop-blur-md border border-slate-700 border-r-0 rounded-l-2xl shadow-2xl flex flex-col justify-center items-end pr-5 pl-2 border-l-2 border-l-amber-500">
+              <span class="text-[9px] font-mono-tech text-slate-400 uppercase tracking-widest mb-1">Motor</span>
+              <div class="flex items-baseline gap-1"><span id="val-rpm" class="text-4xl sm:text-5xl font-display font-bold text-white leading-none tracking-tighter">0</span></div>
+              <span class="text-[10px] font-mono-tech text-amber-500 font-bold mt-0.5">RPM x1000</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-[inset_0_0_30px_rgba(0,0,0,0.6)] group">
+          <div class="absolute top-4 left-5 flex items-center gap-1.5 z-10"><i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i><span class="text-[10px] font-mono-tech uppercase tracking-widest text-slate-400 font-bold">Velocímetro</span></div>
+          <div class="relative w-full max-w-[280px] aspect-square z-10 mt-4">
+            <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-2xl">
+              <path d="M 15.4 70 A 40 40 0 1 1 84.6 70" fill="none" stroke="#1e293b" stroke-width="16" stroke-linecap="butt"/>
+              <g font-size="6" font-weight="bold" font-style="italic" fill="#0f172a" text-anchor="middle" dominant-baseline="central" class="font-display">
+                <text x="15.4" y="70">0</text><text x="10.6" y="43.1">40</text><text x="24.3" y="19.4">80</text><text x="50.0" y="10">120</text><text x="75.7" y="19.4">160</text><text x="89.4" y="43.1">200</text><text x="84.6" y="70">240</text>
+              </g>
+              <g id="needle-speed" class="needle-transition" style="transform-origin: 50px 50px; transform: rotate(-120deg);">
+                <polygon points="48.5,50 51.5,50 50,15" fill="#ef4444" /><circle cx="50" cy="50" r="5" fill="#020617" stroke="#ef4444" stroke-width="1.5"/>
+              </g>
+            </svg>
+            <div class="absolute right-0 top-[22%] bottom-[22%] w-[48%] bg-slate-950/85 backdrop-blur-md border border-slate-700 border-r-0 rounded-l-2xl shadow-2xl flex flex-col justify-center items-end pr-5 pl-2 border-l-2 border-l-emerald-400">
+              <span class="text-[9px] font-mono-tech text-slate-400 uppercase tracking-widest mb-1">Dinámica</span>
+              <div class="flex items-baseline gap-1"><span id="val-speed" class="text-4xl sm:text-5xl font-display font-bold text-white leading-none tracking-tighter">0</span></div>
+              <span class="text-[10px] font-mono-tech text-emerald-400 font-bold mt-0.5">KM / H</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRANK TEST -->
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col justify-center relative overflow-hidden shadow-lg">
+        <div class="flex flex-wrap items-center gap-4 relative z-10">
+          <div class="w-full sm:w-auto text-center sm:text-left">
+            <span class="text-[9px] font-mono-tech text-slate-500 uppercase block mb-1">Voltaje Mín.</span>
+            <div class="flex items-baseline justify-center sm:justify-start gap-1">
+              <span id="val-crank-volt" class="text-3xl font-display font-bold text-white">--</span><span class="text-sky-400 font-bold text-sm">V</span>
+            </div>
+          </div>
+          <div class="flex-1 bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <span class="text-[9px] font-mono-tech text-slate-500 uppercase block mb-1">Diagnóstico Batería</span>
+              <p id="crank-diagnosis" class="text-xs font-semibold text-slate-300">Gire la llave para iniciar evaluación.</p>
+            </div>
+            <span id="crank-status-badge" class="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono-tech border border-slate-700 ml-2">ESPERANDO</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIDS EXTENDIDOS (GRILLA CROSSFOX) CON COMPARATIVA -->
+      <div class="bg-slate-900 border border-slate-800/80 p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-mono-tech font-bold uppercase text-amber-400 flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4"></i> PIDs Estratégicos & Virtuales</h3>
+          <span class="text-[9px] font-mono-tech text-slate-500 bg-slate-800 px-2 py-0.5 rounded">Valores pequeños indican <span class="text-indigo-400 font-bold ml-1 text-[10px]">Δ vs Base</span></span>
+        </div>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">Potencia Est.</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="calc-hp" class="text-xl font-mono-tech font-bold text-sky-400">--</span></div><span class="text-[10px] text-slate-500">HP</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">Torque Est.</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="calc-torque" class="text-xl font-mono-tech font-bold text-purple-400">--</span></div><span class="text-[10px] text-slate-500">Nm</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative shadow-[inset_0_0_10px_rgba(139,92,246,0.1)]">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">Carga Motor</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="ind-val-load" class="text-xl font-mono-tech font-bold text-amber-400">--</span> <span id="diff-load" class="text-[9px] font-bold ml-1"></span></div><span class="text-[10px] text-slate-500">%</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative shadow-[inset_0_0_10px_rgba(244,63,94,0.1)]">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">STFT</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="val-stft-dash" class="text-xl font-mono-tech font-bold text-rose-400">--</span> <span id="diff-stft" class="text-[9px] font-bold ml-1"></span></div><span class="text-[10px] text-slate-500">%</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">Sonda O2 B1S1</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="val-o2-dash" class="text-xl font-mono-tech font-bold text-purple-400">--</span></div><span class="text-[10px] text-slate-500">V</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative shadow-[inset_0_0_10px_rgba(249,115,22,0.1)]">
+            <span class="text-[9px] font-mono-tech text-slate-400 uppercase">Presión MAP</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="val-map-dash" class="text-xl font-mono-tech font-bold text-orange-400">--</span> <span id="diff-map" class="text-[9px] font-bold ml-1"></span></div><span class="text-[10px] text-slate-500">kPa</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative shadow-[inset_0_0_10px_rgba(20,184,166,0.1)]">
+            <span class="text-[9px] font-mono-tech text-slate-400 uppercase">Flujo MAF</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="val-maf-dash" class="text-xl font-mono-tech font-bold text-emerald-400">--</span> <span id="diff-maf" class="text-[9px] font-bold ml-1"></span></div><span class="text-[10px] text-slate-500">g/s</span></div>
+          </div>
+          <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl relative">
+            <span class="text-[9px] font-mono-tech text-slate-400 block uppercase">Ratio AFR Est.</span>
+            <div class="flex items-baseline justify-between mt-1"><div><span id="calc-afr" class="text-xl font-mono-tech font-bold text-emerald-400">14.7</span></div><span class="text-[10px] text-slate-500">AFR</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. ESCÁNER DE SALUD ==================== -->
+    <section id="tab-health" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+        <h2 class="font-display font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="heart-pulse" class="w-5 h-5 text-emerald-400"></i> Scanner de Salud Analítico
+        </h2>
+        <p class="text-[10px] text-slate-400 mt-1 font-mono-tech">Evaluación autónoma cruzando PIDs para revelar fallas ocultas. Detecta falta de sensores sin penalizar.</p>
+      </div>
+
+      <div class="space-y-4">
+        <!-- MÓDULO IA: CRUCES COMPLEJOS Y ESTIMACIONES -->
+        <div class="bg-slate-900 border border-indigo-900/50 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(79,70,229,0.1)]">
+          <div class="bg-indigo-950/30 p-3 border-b border-indigo-900/50 flex items-center justify-between">
+            <h3 class="text-xs font-mono-tech font-bold text-indigo-400 flex items-center gap-2"><i data-lucide="crosshair" class="w-4 h-4"></i> MÓDULO IA: CRUCES COMPLEJOS Y ESTIMADOS</h3>
+          </div>
+          <div class="p-3 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Presión de Combustible (Estimada)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Evalúa el STFT bajo carga extrema. Si se dispara a positivo, indica falta de presión o filtro tapado.</p><p id="rule-fuelpump-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-fuelpump" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Integridad de Mezcla (STFT + LTFT)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Suma ajuste corto y largo. Si es constante > +15% = Aire pirata. < -15% = Goteo Inyector.</p><p id="rule-fuel-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-fuel" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Respuesta Sonda Lambda (O2 B1S1)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Verifica la oscilación rica/pobre (0.1v - 0.9v). Si se congela en un valor constante, está "perezosa".</p><p id="rule-o2-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-o2" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Sincronía Acelerador (APP vs TPS)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Compara el requerimiento del pedal vs la apertura real de la mariposa. Desfases causan "tironeos".</p><p id="rule-tpspedal-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-tpspedal" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Avance de Encendido / Detonación</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Si la ECU retrasa violentamente el encendido (< 0) bajo carga alta, hay cascabeleo o combustible malo.</p><p id="rule-avance-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-avance" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Eficiencia Volumétrica (VE%)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Calcula si el motor respira todo el aire de su cilindrada cruzando MAF y RPM. Normal: 70-85%.</p><p id="rule-ve-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-ve" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Estabilidad de Combustión (Ralentí)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Analiza fluctuaciones mínimas de RPM estando detenido para detectar fallas de encendido o IAC sucia.</p><p id="rule-idle-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-idle" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Válvula PCV / Gases Cárter</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Busca compensaciones en el ajuste de combustible en ralentí bajo que indiquen una válvula de vacío pegada.</p><p id="rule-pcv-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-pcv" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Calidad de Combustible / Octanaje</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Identifica reducciones crónicas y extremas en el avance de la chispa provocadas por detonación de mal combustible.</p><p id="rule-fuelquality-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-fuelquality" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Estado del Catalizador Estimado</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Compara mezcla rica sostenida (O2 alto) en altas exigencias. Si es constante y no limpia, hay riesgo de saturación.</p><p id="rule-cat-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-cat" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- MÓDULO: AIRE Y ADMISIÓN -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+          <div class="bg-slate-800/50 p-3 border-b border-slate-800"><h3 class="text-xs font-mono-tech font-bold text-sky-400 flex items-center gap-2"><i data-lucide="wind" class="w-4 h-4"></i> AIRE Y ADMISIÓN</h3></div>
+          <div class="p-3 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Fuga de Vacío (Entrada de aire no medido)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Detecta fugas analizando un MAP alto combinado con un ajuste de mezcla (STFT) sumamente positivo en ralentí.</p><p id="rule-vacleak-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-vacleak" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Restricción Filtro de Aire</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Evalúa si el filtro de aire está tapado cuando se exige al motor (Alta Carga + Altas RPM pero bajo flujo volumétrico).</p><p id="rule-airfilter-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-airfilter" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Respuesta TPS (Mariposa)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Detecta si la mariposa indica apertura total pero el motor no sube de vueltas (posible potenciómetro dañado).</p><p id="rule-tps-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-tps" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Integridad Vacío en Múltiple (MAP)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Verifica que haya un vacío fuerte (baja presión MAP) cuando la mariposa está cerrada en ralentí.</p><p id="rule-vacuum-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-vacuum" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Rendimiento Sensor MAF</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Confirma que el MAF reporte gran flujo de masa de aire cuando el motor está bajo alta carga y aceleración.</p><p id="rule-maf-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-maf" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Restricción Escape / Catalizador Tapado</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Cruza alta presión en múltiple (MAP) con Altas RPM a baja velocidad (Mucha fuerza, poco flujo resultante).</p><p id="rule-exhaust-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-exhaust" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Desempeño Válvula IAC</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Busca una falta de ajuste en el cierre de ralentí en caliente, lo que indica una válvula perezosa o sucia.</p><p id="rule-iac-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-iac" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Fugas en Presión Positiva</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Verifica si el múltiple de admisión pierde hermeticidad al someterse a presión y flujo elevados en altas RPM.</p><p id="rule-intakeleak-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-intakeleak" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Suciedad Cuerpo de Aceleración</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Analiza discrepancias entre el reposo del pedal y la incapacidad de la mariposa para volver a su punto base de 0%.</p><p id="rule-tbdirty-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-tbdirty" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Válvula EGR / Temperaturas Altas</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Infiere obstrucciones en la recirculación de gases si el motor calienta y retarda encendido injustificadamente en ruta.</p><p id="rule-egr-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-egr" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MÓDULO: ELÉCTRICO Y TÉRMICO -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+          <div class="bg-slate-800/50 p-3 border-b border-slate-800"><h3 class="text-xs font-mono-tech font-bold text-amber-400 flex items-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> ELÉCTRICO Y TÉRMICO</h3></div>
+          <div class="p-3 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Pico de Tensión (Regulador averiado)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Controla que la tensión no supere 15.2v. Evita daños graves a la electrónica y ECU del vehículo.</p><p id="rule-voltsurge-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-voltsurge" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Respuesta Alternador (Carga en marcha)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Monitorea que el voltaje se mantenga entre 13.5v y 14.8v mientras el motor supera las 1000 RPM.</p><p id="rule-alt-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-alt" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Eficiencia Termostato</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Detecta si el termostato quedó "Abierto" verificando bajas temperaturas incluso a altas velocidades.</p><p id="rule-thermo-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-thermo" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Sensor ECT (Fuera de Rango)</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Analiza si el sensor reporta valores físicamente imposibles (-20°C o +130°C repentinos), indicando cortocircuito.</p><p id="rule-ect-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-ect" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Fallo Electroventilador</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Verifica sobrecalentamiento mientras se está detenido (tráfico), síntoma de que el ventilador no acopla.</p><p id="rule-fan-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-fan" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Caída Súbita de Tensión</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Detecta caídas fuertes del voltaje eléctrico general mientras el vehículo está marchando activamente.</p><p id="rule-battdrop-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-battdrop" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Sobrecalentamiento Crítico</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Activa una alerta extrema de emergencia si la temperatura alcanza o supera los 110°C con riesgo para la junta.</p><p id="rule-overheat-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-overheat" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Desgaste por Arranque en Frío</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Penaliza aceleraciones severas en un motor recién encendido donde la lubricación aún no tiene la viscosidad óptima.</p><p id="rule-coldstart-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-coldstart" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between border-b border-slate-800/50 pb-2">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Deslizamiento Correa Accesorios</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Identifica una deficiencia de carga a altas RPM, revelando que la correa del alternador puede estar patinando.</p><p id="rule-vbelt-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-vbelt" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="w-10/12"><p class="text-xs font-bold text-slate-200">Fallo de Masas y Tierras</p><p class="text-[10px] text-slate-500 font-mono-tech mt-0.5">Un bajo voltaje acoplado a alteraciones fuertes de combustible en ralentí delata falsos contactos de masa y chasis.</p><p id="rule-ground-msg" class="text-[9px] font-bold text-slate-500 mt-1">Sin dato / Esperando</p></div><div id="rule-ground" class="w-3.5 h-3.5 rounded-full status-dot-gray shrink-0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. ALARMAS CUSTOM ==================== -->
+    <section id="tab-alarms" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+        <h2 class="font-display font-bold text-base text-white flex items-center gap-2"><i data-lucide="bell-ring" class="w-5 h-5 text-rose-400"></i> Alarmas Customizadas</h2>
+      </div>
+      <div class="bg-slate-950 border border-slate-800 p-4 sm:p-6 rounded-2xl space-y-4">
+        <h3 class="text-xs font-mono-tech font-bold text-sky-400 uppercase tracking-widest border-b border-slate-800 pb-2">Crear Alarma</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select id="alarm-p1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+            <option value="rpm">RPM Motor</option><option value="speed">Velocidad</option><option value="coolant">Temp Motor</option>
+            <option value="voltage">Voltaje</option><option value="load">Carga Motor</option><option value="map">Presión MAP</option>
+          </select>
+          <select id="alarm-o1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+            <option value=">">Mayor a (>)</option><option value="<">Menor a (<)</option>
+          </select>
+          <input type="number" id="alarm-v1" placeholder="Valor (Ej: 3000)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white">
+        </div>
+        <button onclick="createCustomAlarm()" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-mono-tech text-xs font-bold rounded-xl mt-4">GUARDAR ALARMA</button>
+      </div>
+      
+      <!-- Lista de alarmas -->
+      <div id="alarms-list" class="space-y-2 mt-4"></div>
+    </section>
+
+    <!-- ==================== 4. ANALÍTICA ==================== -->
+    <section id="tab-analytics" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg">
+        <h2 class="font-display font-bold text-sm text-white mb-4 border-b border-slate-800 pb-3 flex items-center gap-2"><i data-lucide="fuel" class="text-emerald-400"></i> Rendimiento / Costos</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-500 uppercase">Precio Comb.</span><input type="number" id="input-fuel-price" value="1000" class="w-full bg-transparent text-xl font-bold text-white border-b border-slate-700 focus:outline-none"></div>
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-500 uppercase">L/100km (Inst)</span><div class="text-2xl font-bold text-amber-400" id="stat-l100">0.0</div></div>
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-500 uppercase">Gasto/KM</span><div class="text-2xl font-bold text-emerald-400" id="stat-cost-km">0.00</div></div>
+          <div class="bg-emerald-950/20 p-4 rounded-xl border border-emerald-900/50"><span class="text-[9px] text-emerald-500 uppercase font-bold">Viaje Total</span><div class="text-3xl font-bold text-white" id="stat-trip-cost">0.00</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 5. TELEMETRÍA MÚLTIPLE ==================== -->
+    <section id="tab-telemetry" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+        <div>
+          <h3 class="text-sm font-mono-tech font-bold uppercase text-slate-200">GRÁFICO EN VIVO MULTI-PARÁMETRO</h3>
+          <p class="text-[10px] text-slate-400 mt-1 font-mono-tech">Ejes normalizados (0-100). Selecciona los parámetros de la ECU y Estimados para graficar en vivo.</p>
+        </div>
+        <div class="h-64 sm:h-80 w-full relative bg-[#121826] rounded-xl border border-slate-700/50 p-2 overflow-hidden shadow-inner">
+          <canvas id="crossChartCanvas"></canvas>
+        </div>
+        <div class="border-t border-slate-800 pt-4">
+          <h3 class="text-xs font-mono-tech font-bold uppercase text-slate-300 mb-3">SELECTOR (COMBINABLES ECU + CALCULADOS)</h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-2 text-[11px] font-mono-tech text-slate-300">
+            <!-- ECU PIDs -->
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" checked onchange="toggleDataset('rpm')" class="chk-rpm w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#38bdf8] shrink-0"></span><span>RPM</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" checked onchange="toggleDataset('speed')" class="chk-speed w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#10b981] shrink-0"></span><span>Velocidad</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('coolant')" class="chk-coolant w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#f43f5e] shrink-0"></span><span>Temp. motor</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('voltage')" class="chk-voltage w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#f59e0b] shrink-0"></span><span>Voltaje</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('load')" class="chk-load w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#8b5cf6] shrink-0"></span><span>Carga motor</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('tps')" class="chk-tps w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#ec4899] shrink-0"></span><span>Mariposa</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('pedal')" class="chk-pedal w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#eab308] shrink-0"></span><span>Pedal APP</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('avance')" class="chk-avance w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#0ea5e9] shrink-0"></span><span>Avance</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('map')" class="chk-map w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#f97316] shrink-0"></span><span>MAP</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('maf')" class="chk-maf w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#14b8a6] shrink-0"></span><span>MAF</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('o2')" class="chk-o2 w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#a855f7] shrink-0"></span><span>Sonda O2</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('stft')" class="chk-stft w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#f43f5e] shrink-0"></span><span>STFT</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition"><input type="checkbox" onchange="toggleDataset('ltft')" class="chk-ltft w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#d97706] shrink-0"></span><span>LTFT</span></label>
+            <!-- CALCULADOS NUEVOS -->
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition bg-indigo-900/20"><input type="checkbox" onchange="toggleDataset('hp')" class="chk-hp w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#6366f1] shrink-0"></span><span>HP Est.</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition bg-indigo-900/20"><input type="checkbox" onchange="toggleDataset('torque')" class="chk-torque w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#d946ef] shrink-0"></span><span>Torque</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition bg-indigo-900/20"><input type="checkbox" onchange="toggleDataset('ve')" class="chk-ve w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#8b5cf6] shrink-0"></span><span>VE %</span></label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-800/50 p-1 rounded transition bg-indigo-900/20"><input type="checkbox" onchange="toggleDataset('afr')" class="chk-afr w-3.5 h-3.5"><span class="w-3 h-3 rounded-sm bg-[#06b6d4] shrink-0"></span><span>AFR Est.</span></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 6. SESIONES Y REPETICIÓN ==================== -->
+    <section id="tab-sessions" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="font-display font-bold text-base text-white flex items-center gap-2"><i data-lucide="database" class="text-amber-400"></i> Líneas Base & Grabaciones</h2>
+          <button onclick="saveCurrentSession()" class="px-4 py-2.5 bg-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2">GUARDAR SESIÓN ACTUAL</button>
+        </div>
+        <div class="flex gap-2 border-t border-slate-800 pt-4 mt-2">
+          <button onclick="exportUserData()" class="flex-1 py-2 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-lg text-[10px] flex justify-center items-center gap-2 transition hover:bg-slate-700"><i data-lucide="download" class="w-4 h-4"></i> EXPORTAR PERFIL</button>
+          <label class="flex-1 py-2 bg-slate-800 text-slate-300 border border-slate-700 font-bold rounded-lg text-[10px] flex justify-center items-center gap-2 cursor-pointer transition hover:bg-slate-700">
+             <i data-lucide="upload" class="w-4 h-4"></i> IMPORTAR PERFIL
+             <input type="file" id="input-import-data" accept=".json" class="hidden" onchange="importUserData(event)">
+          </label>
+        </div>
+      </div>
+      <div id="sessions-list-container" class="space-y-3"></div>
+    </section>
+
+    <!-- ==================== 7. PRUEBAS GUIADAS POR VOZ ==================== -->
+    <section id="tab-voicetest" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-between items-center shadow-lg">
+        <h2 class="font-display font-bold text-base text-white flex items-center gap-2"><i data-lucide="mic" class="text-sky-400"></i> Asistente de Pruebas Automotrices</h2>
+      </div>
+
+      <div id="voicetest-selector" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md text-center">
+          <i data-lucide="parking-circle" class="w-8 h-8 text-amber-500 mx-auto mb-2"></i>
+          <h3 class="font-bold text-white mb-2 text-sm">Modo Estacionado</h3>
+          <p class="text-[10px] text-slate-400 mb-3">Evalúa ralentí, batería, y reacción inicial.</p>
+          <button onclick="startVoiceTest('parked')" class="w-full py-2 bg-amber-600 text-slate-950 rounded-xl font-bold text-xs">INICIAR TEST</button>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md text-center">
+          <i data-lucide="building-2" class="w-8 h-8 text-sky-500 mx-auto mb-2"></i>
+          <h3 class="font-bold text-white mb-2 text-sm">Modo Ciudad</h3>
+          <p class="text-[10px] text-slate-400 mb-3">Evalúa aceleraciones y frenados cortos.</p>
+          <button onclick="startVoiceTest('city')" class="w-full py-2 bg-sky-600 text-white rounded-xl font-bold text-xs">INICIAR TEST</button>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md text-center">
+          <i data-lucide="milestone" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
+          <h3 class="font-bold text-white mb-2 text-sm">Modo Ruta</h3>
+          <p class="text-[10px] text-slate-400 mb-3">Evalúa altas RPM y refrigeración bajo carga.</p>
+          <button onclick="startVoiceTest('highway')" class="w-full py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs">INICIAR TEST</button>
+        </div>
+      </div>
+
+      <div id="voicetest-active" class="hidden bg-slate-950 border border-sky-900/50 p-6 sm:p-10 rounded-2xl text-center shadow-[0_0_30px_rgba(14,165,233,0.15)] mt-4 transition-all">
+         <span id="test-step-counter" class="text-sky-500 font-mono-tech text-xs sm:text-sm font-bold uppercase tracking-widest bg-sky-900/30 px-4 py-1.5 rounded-full">Paso 1 de 10</span>
+         <h3 id="test-instruction-text" class="text-3xl sm:text-4xl font-display font-bold text-white mt-8 mb-10 leading-tight">Encienda el motor y mantenga en ralentí.</h3>
+         
+         <div class="flex justify-center gap-4">
+            <button onclick="stopVoiceTest('Test cancelado por el usuario.')" class="px-5 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition">CANCELAR</button>
+            <button onclick="confirmCurrentTestStep()" class="px-8 py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm sm:text-base rounded-xl shadow-lg transition flex items-center gap-2">CONFIRMAR PASO <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+         </div>
+      </div>
+      <div id="test-results-list" class="space-y-3 mt-4"></div>
+    </section>
+
+    <!-- ==================== 8. BITÁCORA ==================== -->
+    <section id="tab-audit" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex justify-between shadow-lg">
+        <h2 class="font-display font-bold text-base text-white flex items-center gap-2"><i data-lucide="notebook" class="text-amber-400"></i> Bitácora de Sucesos</h2>
+        <button onclick="clearAuditLog()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs">Limpiar</button>
+      </div>
+      <div id="audit-log-list" class="space-y-3"></div>
+    </section>
+
+    <!-- ==================== 9. ESCÁNER DTC ==================== -->
+    <section id="tab-dtc" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex justify-between shadow-lg items-center">
+        <h2 class="font-display font-bold text-base text-white flex items-center gap-2"><i data-lucide="cpu" class="text-sky-400"></i> Códigos DTC</h2>
+        <div class="flex gap-2">
+           <button onclick="scanDTCsPro()" id="btn-scan" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 transition-colors text-white rounded-xl text-xs font-bold">ESCANEAR ECU</button>
+           <!-- Se ha eliminado la clase "hidden" para que el botón "BORRAR ECU" siempre esté visible -->
+           <button onclick="clearDTCsPro()" id="btn-clear-dtc" class="px-5 py-2.5 bg-slate-800 hover:bg-rose-900 text-rose-400 hover:text-white transition-colors rounded-xl text-xs font-bold">BORRAR ECU</button>
+        </div>
+      </div>
+      <div id="dtc-results-container" class="space-y-3">
+         <div class="bg-slate-900/40 p-10 rounded-xl text-center border border-slate-800">
+            <p class="text-slate-400 text-xs font-mono-tech">Presiona Escanear ECU para iniciar lectura Bluetooth.</p>
+         </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 fixed bottom-0 left-0 right-0 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
+    <div class="flex overflow-x-auto whitespace-nowrap px-2 py-2 items-center justify-start sm:justify-center gap-2 no-scrollbar touch-pan-x">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn shrink-0 w-16 flex flex-col items-center text-sky-400 transition hover:text-sky-300"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">INICIO</span></button>
+      <button onclick="switchTab('health')" id="nav-health" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="heart-pulse" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">SALUD</span></button>
+      <button onclick="switchTab('alarms')" id="nav-alarms" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="bell-ring" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">ALARMAS</span></button>
+      <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="activity" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">ANALÍTICA</span></button>
+      <button onclick="switchTab('telemetry')" id="nav-telemetry" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="line-chart" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">GRÁFICOS</span></button>
+      <button onclick="switchTab('sessions')" id="nav-sessions" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="award" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">SESIONES</span></button>
+      <button onclick="switchTab('voicetest')" id="nav-voicetest" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="mic" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">TEST VOZ</span></button>
+      <button onclick="switchTab('audit')" id="nav-audit" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="notebook" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">BITÁCORA</span></button>
+      <button onclick="switchTab('dtc')" id="nav-dtc" class="nav-btn shrink-0 w-16 flex flex-col items-center text-slate-500 hover:text-slate-300 transition"><i data-lucide="cpu" class="w-5 h-5"></i><span class="text-[9px] mt-1 font-bold">ESCÁNER</span></button>
+    </div>
+  </nav>
+
+  <!-- ==================== SCRIPT LÓGICO COMPLETO ==================== -->
+  <script>
+    lucide.createIcons();
+
+    // TOAST
+    let toastTimeout;
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const text = document.getElementById('toast-text');
+      const icon = document.getElementById('toast-icon');
+      text.textContent = msg;
+      if (type === 'error') { icon.setAttribute('data-lucide', 'alert-circle'); icon.className = 'w-4 h-4 mr-2 text-rose-500'; } 
+      else if (type === 'success') { icon.setAttribute('data-lucide', 'check-circle-2'); icon.className = 'w-4 h-4 mr-2 text-emerald-400'; } 
+      else if (type === 'warning') { icon.setAttribute('data-lucide', 'alert-triangle'); icon.className = 'w-4 h-4 mr-2 text-amber-400'; } 
+      else { icon.setAttribute('data-lucide', 'info'); icon.className = 'w-4 h-4 mr-2 text-sky-400'; }
+      lucide.createIcons();
+      container.classList.remove('-translate-y-20', 'opacity-0', 'invisible'); container.classList.add('translate-y-0', 'opacity-100', 'visible');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { container.classList.remove('translate-y-0', 'opacity-100', 'visible'); container.classList.add('-translate-y-20', 'opacity-0', 'invisible'); }, 5000); 
+    }
+
+    // STATE Y USUARIOS
+    let currentProfile = "";
+    let appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [] };
+
+    let isConnected = false, isDemoMode = false, isReplayMode = false, demoInterval = null, replayInterval = null, demoTicks = 0, faultFired = {};
+    let currentLiveData = { rpm: null, speed: null, coolant: null, voltage: null, load: null, tps: null, pedal: null, avance: null, map: null, maf: null, o2: null, stft: null, ltft: null, baro: 101, hp: null, torque: null, ve: null, afr: null };
+    
+    let goldenMasterSession = null;
+    let globalHealthScore = 100;
+    let crankTestActive = false, minCrankVolt = 14.0;
+    let tripDistanceKm = 0, tripFuelLiters = 0, lastTime = Date.now();
+    let crossChart = null, chartVerticalEvents = [];
+    
+    // Grabación de viaje
+    let liveTripRecording = [], lastRecordTick = 0;
+
+    // BLUETOOTH STATE
+    let bleDevice = null, bleCharacteristicTx = null, bleCharacteristicRx = null;
+    let obdBuffer = "", isObdPolling = false, pausePolling = false, pendingCommandResolve = null;
+    let detectedCarProtocol = "Buscando Protocolo...";
+
+    // ----------------------------------------------------
+    // LÓGICA DE USUARIOS Y AUTO-GUARDADO
+    // ----------------------------------------------------
+    window.onload = () => { 
+        initSpeechSynthesis(); Chart.register(customChartPlugins); initCrossChart(); 
+        populateUserDropdowns();
+    };
+
+    function populateUserDropdowns() {
+        const selectModal = document.getElementById('select-existing-user');
+        const selectHeader = document.getElementById('header-profile-select');
+        let optionsHtml = `<option value="demo">Demo (Sin Guardar)</option>`;
+        for (let i = 0; i < localStorage.length; i++) {
+            let key = localStorage.key(i);
+            if (key.startsWith('autoscan_data_')) {
+                let name = key.replace('autoscan_data_', '');
+                if(name !== 'demo') optionsHtml += `<option value="${name}">${name}</option>`;
+            }
+        }
+        selectModal.innerHTML = optionsHtml; selectHeader.innerHTML = optionsHtml;
+    }
+
+    function loginUser() {
+       const input = document.getElementById('input-username').value.trim();
+       const selected = document.getElementById('select-existing-user').value;
+       
+       currentProfile = input !== "" ? input : selected;
+       if(!currentProfile) return showToast('Selecciona o ingresa un nombre', 'error');
+       
+       document.getElementById('header-profile-select').value = currentProfile;
+       document.getElementById('user-modal').classList.add('opacity-0', 'pointer-events-none');
+       
+       // Truco para desbloquear el motor de voz en navegadores modernos tras el click
+       if('speechSynthesis' in window) {
+           let msg = new SpeechSynthesisUtterance(' '); msg.volume = 0; window.speechSynthesis.speak(msg);
+       }
+
+       if (currentProfile === 'demo') {
+           appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [] };
+           showToast('Modo Demostración Activado. No se guardarán datos.', 'info'); toggleDemoMode();
+       } else { loadUserData(); }
+    }
+
+    function switchProfileHeader(newProfile) {
+        if(isConnected) toggleConnectRealBluetooth(); 
+        if(isDemoMode) toggleDemoMode();
+        if(isReplayMode) stopReplay();
+        
+        currentProfile = newProfile;
+        if(currentProfile === 'demo') {
+           appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [] };
+           showToast('Cambiado a Modo Demo. No se guardará nada.', 'info'); toggleDemoMode();
+        } else { loadUserData(); }
+    }
+
+    function loadUserData() {
+       const saved = localStorage.getItem(`autoscan_data_${currentProfile}`);
+       if (saved) {
+          try { 
+             let loaded = JSON.parse(saved); 
+             appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [], ...loaded };
+             showToast(`Perfil cargado: ${currentProfile}`, 'success'); 
+          } catch(e) { console.error("Error leyendo datos", e); }
+       } else {
+          appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [] };
+          showToast(`Nuevo perfil creado: ${currentProfile}`, 'info');
+       }
+       populateUserDropdowns(); document.getElementById('header-profile-select').value = currentProfile;
+       goldenMasterSession = appState.savedSessions.find(s => s.isGolden) || null;
+       document.getElementById('baseline-name').textContent = goldenMasterSession ? goldenMasterSession.name : "Ninguna seleccionada";
+       renderAuditLog(); renderSessionsList(); renderTestResults(); renderAlarmsList();
+    }
+
+    function saveUserData() {
+       if(!currentProfile || currentProfile === 'demo') return;
+       localStorage.setItem(`autoscan_data_${currentProfile}`, JSON.stringify(appState));
+    }
+
+    document.addEventListener('visibilitychange', () => { if (document.hidden && currentProfile !== 'demo') saveUserData(); });
+    window.addEventListener('beforeunload', () => { if(currentProfile !== 'demo') saveUserData(); });
+
+    function exportUserData() {
+       if(!currentProfile || currentProfile === 'demo') return showToast('No disponible en modo Demo.', 'error');
+       saveUserData(); 
+       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState));
+       const a = document.createElement('a'); a.href = dataStr; a.download = `AutoScan_${currentProfile.replace(/\s/g,'_')}.json`;
+       document.body.appendChild(a); a.click(); a.remove();
+       showToast('Perfil exportado correctamente.', 'success');
+    }
+
+    function importUserData(e) {
+       if(currentProfile === 'demo') return showToast('Sal del modo demo para importar.', 'error');
+       const file = e.target.files[0]; if (!file) return;
+       const reader = new FileReader();
+       reader.onload = (event) => {
+          try {
+             const imported = JSON.parse(event.target.result);
+             if (imported.savedSessions !== undefined) { 
+                 appState = { savedSessions: [], confirmedFaultsLog: [], customAlarms: [], testResultsLog: [], ...imported };
+                 saveUserData(); loadUserData(); showToast('Perfil importado y cargado.', 'success'); 
+             } else throw new Error("Formato inválido");
+          } catch(err) { showToast('Error al importar archivo.', 'error'); }
+       }; reader.readAsText(file);
+    }
+
+    // ----------------------------------------------------
+    // GRÁFICOS Y PLUGINS
+    // ----------------------------------------------------
+    const datasetConfig = {
+      rpm:     { label: 'RPM', color: '#38bdf8', idx: 0, max: 6000, hidden: false },
+      speed:   { label: 'Velocidad', color: '#10b981', idx: 1, max: 220, hidden: false },
+      coolant: { label: 'Temp Motor', color: '#f43f5e', idx: 2, max: 130, hidden: true },
+      voltage: { label: 'Voltaje', color: '#f59e0b', idx: 3, max: 15, hidden: true },
+      load:    { label: 'Carga Motor', color: '#8b5cf6', idx: 4, max: 100, hidden: true },
+      tps:     { label: 'Mariposa', color: '#ec4899', idx: 5, max: 100, hidden: true },
+      pedal:   { label: 'Pedal APP', color: '#eab308', idx: 6, max: 100, hidden: true },
+      avance:  { label: 'Avance', color: '#0ea5e9', idx: 7, max: 60, hidden: true },
+      map:     { label: 'MAP', color: '#f97316', idx: 8, max: 110, hidden: true },
+      maf:     { label: 'MAF', color: '#14b8a6', idx: 9, max: 150, hidden: true },
+      o2:      { label: 'Sonda O2', color: '#a855f7', idx: 10, max: 1, hidden: true },
+      stft:    { label: 'STFT', color: '#f43f5e', idx: 11, max: 50, hidden: true },
+      ltft:    { label: 'LTFT', color: '#d97706', idx: 12, max: 50, hidden: true },
+      hp:      { label: 'Potencia', color: '#6366f1', idx: 13, max: 120, hidden: true },
+      torque:  { label: 'Torque', color: '#d946ef', idx: 14, max: 200, hidden: true },
+      ve:      { label: 'VE %', color: '#8b5cf6', idx: 15, max: 100, hidden: true },
+      afr:     { label: 'AFR', color: '#06b6d4', idx: 16, max: 20, hidden: true }
+    };
+
+    const customChartPlugins = {
+      id: 'advancedOBDPlugin',
+      afterDraw(chart) {
+        if(chart.canvas.id !== 'crossChartCanvas') return;
+        const ctx = chart.ctx, xAxis = chart.scales.x, yAxis = chart.scales.y;
+        chartVerticalEvents.forEach(evtIdx => {
+          if (evtIdx >= 0 && evtIdx <= 30) {
+            const xPos = xAxis.getPixelForTick(evtIdx);
+            ctx.save(); ctx.beginPath(); ctx.moveTo(xPos, yAxis.top); ctx.lineTo(xPos, yAxis.bottom);
+            ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.restore();
+          }
+        });
+        chart.data.datasets.forEach((dataset, i) => {
+          if(!chart.isDatasetVisible(i)) return;
+          const meta = chart.getDatasetMeta(i);
+          if(meta.data.length > 0) {
+            const lastPoint = meta.data[meta.data.length - 1];
+            const rawVal = dataset.currentRawValue !== undefined ? dataset.currentRawValue.toFixed(1) : dataset.data[dataset.data.length - 1].toFixed(0);
+            ctx.save(); ctx.fillStyle = dataset.borderColor; ctx.font = 'bold 11px "JetBrains Mono"';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 4;
+            ctx.fillText(` ${rawVal}`, lastPoint.x + 3, lastPoint.y); ctx.restore();
+          }
+        });
+      }
+    };
+
+    function initCrossChart() {
+      const ctx = document.getElementById('crossChartCanvas').getContext('2d');
+      const datasets = Object.keys(datasetConfig).map(key => ({
+        label: datasetConfig[key].label, data: Array(30).fill(0), borderColor: datasetConfig[key].color, borderWidth: 2, tension: 0.3, pointRadius: 0, hidden: datasetConfig[key].hidden, currentRawValue: 0
+      }));
+      crossChart = new Chart(ctx, {
+        type: 'line', data: { labels: Array(30).fill(''), datasets },
+        options: { responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { right: 35 } }, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } } }
+      });
+    }
+
+    function toggleDataset(key) {
+      if(crossChart && datasetConfig[key]) { const idx = datasetConfig[key].idx; crossChart.setDatasetVisibility(idx, !crossChart.isDatasetVisible(idx)); crossChart.update(); }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-sky-400'); el.classList.add('text-slate-500'); });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).classList.remove('text-slate-500'); document.getElementById(`nav-${tabId}`).classList.add('text-sky-400');
+      const b = document.getElementById('ai-alert-banner'); b.classList.remove('translate-y-4', 'opacity-100', 'visible'); b.classList.add('-translate-y-10', 'opacity-0', 'invisible');
+    }
+
+    function triggerNeedleSweep() {
+      const n1 = document.getElementById('needle-rpm'), n2 = document.getElementById('needle-speed'), hNeedle = document.getElementById('needle-health');
+      n1.classList.add('needle-sweep'); n2.classList.add('needle-sweep'); hNeedle.classList.add('needle-sweep');
+      n1.style.transform = `rotate(120deg)`; n2.style.transform = `rotate(120deg)`; hNeedle.style.transform = `rotate(135deg)`;
+      showToast('Calibrando agujas analógicas...', 'info');
+      setTimeout(() => {
+        n1.style.transform = `rotate(-120deg)`; n2.style.transform = `rotate(-120deg)`; hNeedle.style.transform = `rotate(-135deg)`;
+        setTimeout(() => { n1.classList.remove('needle-sweep'); n2.classList.remove('needle-sweep'); hNeedle.classList.remove('needle-sweep'); updateHealthGauge(globalHealthScore); }, 1200);
+      }, 1200);
+    }
+
+    // ----------------------------------------------------
+    // ALARMAS CUSTOM
+    // ----------------------------------------------------
+    function createCustomAlarm() {
+        const p1 = document.getElementById('alarm-p1').value;
+        const o1 = document.getElementById('alarm-o1').value;
+        const v1 = parseFloat(document.getElementById('alarm-v1').value);
+        if(isNaN(v1)) return showToast('Ingresa un valor numérico válido', 'error');
+        
+        appState.customAlarms.push({ id: Date.now(), p1, o1, v1 });
+        saveUserData(); renderAlarmsList();
+        showToast("Alarma configurada exitosamente.", "success");
+        document.getElementById('alarm-v1').value = ''; // Limpiar input
+    }
+    
+    function deleteAlarm(id) {
+        appState.customAlarms = appState.customAlarms.filter(a => a.id !== id);
+        saveUserData(); renderAlarmsList(); showToast("Alarma eliminada", "info");
+    }
+
+    function renderAlarmsList() {
+        const c = document.getElementById('alarms-list'); c.innerHTML = '';
+        if(!appState.customAlarms || appState.customAlarms.length === 0) { c.innerHTML = '<p class="text-[10px] text-slate-500">No hay alarmas activas.</p>'; return; }
+        appState.customAlarms.forEach(al => {
+            c.innerHTML += `<div class="bg-slate-900 border border-slate-700 p-3 rounded-lg flex justify-between items-center shadow-md">
+                <span class="text-xs font-bold text-sky-400 uppercase">SI ${al.p1} ${al.o1} ${al.v1}</span>
+                <button onclick="deleteAlarm(${al.id})" class="text-rose-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>`;
+        });
+        lucide.createIcons();
+    }
+
+    // ----------------------------------------------------
+    // SALUD Y "SIN DATO" PROTEGIDO
+    // ----------------------------------------------------
+    function calculateVirtualPIDs(data) {
+      if (data.maf == null || isNaN(data.maf)) {
+        let mapVal = data.map || (data.baro * ((data.load || 0)/100)); let rpm = data.rpm || 0;
+        let calculatedMaf = (rpm * mapVal * 1.6 * 0.8) / (120 * 2.87 * (25 + 273.15)) * 1000; 
+        data.maf = isNaN(calculatedMaf) || rpm === 0 ? null : calculatedMaf;
+      }
+      if (data.map == null || isNaN(data.map)) { data.map = data.load != null ? data.baro * (data.load / 100) : null; }
+      if (data.pedal == null && data.tps != null) { data.pedal = data.tps; }
+      
+      let rpm = data.rpm || 0; let load = data.load || 0;
+      data.hp = Math.round((load / 100) * (rpm / 6000) * 101); data.torque = rpm > 0 ? Math.round((data.hp * 5252) / rpm * 1.355) : 0;
+      if(data.hp === 0 && rpm === 0) { data.hp = null; data.torque = null; }
+      if (data.maf != null && rpm > 500) { data.ve = (data.maf * 120 * 100) / (rpm * 1.6 * 1.2); } else { data.ve = null; }
+      if (data.stft != null) { data.afr = 14.7 - (data.stft / 10); } else { data.afr = null; }
+
+      return data;
+    }
+
+    let idleFluctuationMem = [];
+    function runHealthScanner(data) {
+      const { rpm, speed, coolant, voltage, tps, map, maf, load, pedal, o2, stft, ltft, avance, ve } = data;
+      let scorePenalties = 0; let alertMsg = null, alertType = null;
+
+      if (rpm != null && rpm === 0 && !crankTestActive) { crankTestActive = true; minCrankVolt = voltage || 12.0; document.getElementById('crank-status-badge').textContent = "LISTO (GIRE LLAVE)"; } 
+      else if (crankTestActive && rpm != null && rpm > 0 && rpm < 500) { if(voltage < minCrankVolt) minCrankVolt = voltage; document.getElementById('val-crank-volt').textContent = minCrankVolt.toFixed(1); } 
+      else if (crankTestActive && rpm != null && rpm >= 500) { crankTestActive = false; document.getElementById('crank-status-badge').textContent = "EVALUADO";
+        if (minCrankVolt < 9.5) { document.getElementById('crank-diagnosis').textContent = "Batería agotada."; document.getElementById('crank-diagnosis').className = "text-xs font-semibold text-rose-500"; registerAuditFault("Caída tensión arranque", "electrical"); } 
+        else { document.getElementById('crank-diagnosis').textContent = "Arranque exitoso."; document.getElementById('crank-diagnosis').className = "text-xs font-semibold text-emerald-400"; }
+      }
+      
+      const updateRuleUI = (id, status, msg, isAlert = false) => {
+         const dot = document.getElementById(`rule-${id}`); if(dot) dot.className = `w-3.5 h-3.5 rounded-full status-dot-${status} shrink-0`;
+         const msgEl = document.getElementById(`rule-${id}-msg`);
+         if(msgEl) { msgEl.textContent = msg; msgEl.className = `text-[9px] font-bold mt-1 text-${status === 'green' ? 'emerald-400' : status === 'red' ? 'rose-400' : status === 'yellow' ? 'amber-400' : 'slate-500'}`; }
+         if (isAlert && status === 'red') { alertMsg = msg; alertType = id; }
+      };
+
+      // --- MÓDULO IA: CRUCES COMPLEJOS Y ESTIMADOS (10 reglas) ---
+      if (load != null && stft != null) {
+          if (load > 70 && stft > 12) { scorePenalties += 20; updateRuleUI('fuelpump', 'red', 'STFT se dispara a positivo bajo carga. Posible falta de presión.', true); }
+          else if (load > 70) { updateRuleUI('fuelpump', 'green', 'Caudal de combustible óptimo bajo carga.'); }
+          else { updateRuleUI('fuelpump', 'gray', 'Esperando alta carga...', false); }
+      } else { updateRuleUI('fuelpump', 'gray', 'Sin dato', false); }
+
+      if (stft != null && ltft != null) {
+          let totalTrim = stft + ltft;
+          if(Math.abs(totalTrim) > 15) { scorePenalties += 30; updateRuleUI('fuel', 'red', totalTrim > 15 ? "Mezcla extremadamente POBRE." : "Mezcla extremadamente RICA.", true); }
+          else { updateRuleUI('fuel', 'green', 'Ajuste a corto y largo plazo normal (0-5%).'); }
+      } else { updateRuleUI('fuel', 'gray', 'Sin dato', false); }
+
+      if (o2 != null) {
+          if(rpm != null && rpm > 1000 && coolant != null && coolant > 70 && o2 === 0.45 && isDemoMode && demoTicks > 100) { scorePenalties += 25; updateRuleUI('o2', 'red', "Sonda O2 'CONGELADA'.", true); }
+          else { updateRuleUI('o2', 'green', 'Oscilando correctamente en ciclo cerrado.'); }
+      } else { updateRuleUI('o2', 'gray', 'Sin dato', false); }
+
+      if (pedal != null && tps != null) {
+          if(Math.abs(pedal - tps) > 15) { scorePenalties += 20; updateRuleUI('tpspedal', 'red', "Desfase severo Pedal/Mariposa.", true); }
+          else { updateRuleUI('tpspedal', 'green', 'Sincronización electrónica precisa.'); }
+      } else { updateRuleUI('tpspedal', 'gray', 'Sin dato', false); }
+
+      if (avance != null && load != null) {
+          if(load > 60 && avance < 0) { scorePenalties += 30; updateRuleUI('avance', 'red', "RETARDO de chispa agresivo (<-1). Detectado cascabeleo.", true); }
+          else { updateRuleUI('avance', 'green', 'Avance de encendido óptimo para la carga actual.'); }
+      } else { updateRuleUI('avance', 'gray', 'Sin dato', false); }
+
+      if (ve != null && load != null) {
+          if (ve < 65 && load > 70) { scorePenalties += 15; updateRuleUI('ve', 'red', `Baja respiración (${ve.toFixed(1)}%). Filtro sucio o escape restringido.`); }
+          else { updateRuleUI('ve', 'green', `Respiración y llenado de cilindros óptimo (${ve.toFixed(1)}%).`); }
+      } else { updateRuleUI('ve', 'gray', 'Sin dato'); }
+
+      if (rpm != null && speed != null && speed === 0 && tps != null && tps < 5) {
+          idleFluctuationMem.push(rpm); if (idleFluctuationMem.length > 10) idleFluctuationMem.shift();
+          const maxR = Math.max(...idleFluctuationMem), minR = Math.min(...idleFluctuationMem);
+          if (maxR - minR > 120 && rpm > 400) { scorePenalties += 20; updateRuleUI('idle', 'red', "Fluctuación alta. Posible Misfire o IAC sucia."); }
+          else if (rpm > 400) { updateRuleUI('idle', 'green', "Combustión y marcha mínima totalmente estables."); }
+          else { updateRuleUI('idle', 'gray', "Motor apagado."); }
+      } else { idleFluctuationMem = []; updateRuleUI('idle', 'gray', speed > 0 ? "Vehículo en movimiento." : "Acelerando."); }
+
+      // Nuevos IA Complejos
+      if (rpm != null && map != null && stft != null) {
+          if (rpm < 1000 && map < 45 && stft > 8 && stft < 15) { scorePenalties += 10; updateRuleUI('pcv', 'yellow', 'Posible fuga leve o válvula PCV pegada.', true); }
+          else if (rpm < 1000) { updateRuleUI('pcv', 'green', 'Ventilación de cárter normal.'); }
+          else { updateRuleUI('pcv', 'gray', 'Evaluación exclusiva en ralentí.'); }
+      } else { updateRuleUI('pcv', 'gray', 'Sin dato.'); }
+
+      if (load != null && avance != null && coolant != null) {
+          if (load > 60 && avance < -5 && coolant > 80) { scorePenalties += 15; updateRuleUI('fuelquality', 'red', 'Cascabeleo crónico. Bajo octanaje de combustible.', true); }
+          else if (load > 60) { updateRuleUI('fuelquality', 'green', 'Combustión limpia sin detonaciones anormales.'); }
+          else { updateRuleUI('fuelquality', 'gray', 'Requiere carga alta del motor.'); }
+      } else { updateRuleUI('fuelquality', 'gray', 'Sin dato.'); }
+
+      if (load != null && rpm != null && o2 != null && stft != null) {
+          if (load > 60 && rpm > 3000 && o2 > 0.8 && stft < -10) { scorePenalties += 15; updateRuleUI('cat', 'yellow', 'Mezcla rica persistente en exigencia. Afecta al catalizador.', true); }
+          else if (load > 60 && rpm > 3000) { updateRuleUI('cat', 'green', 'Ciclos y quema eficientes en alta carga.'); }
+          else { updateRuleUI('cat', 'gray', 'Requiere demanda sostenida en alta.'); }
+      } else { updateRuleUI('cat', 'gray', 'Sin dato.'); }
+
+
+      // --- MÓDULO AIRE Y ADMISIÓN (10 reglas) ---
+      if (rpm != null && map != null && stft != null) {
+          if (rpm < 1200 && rpm > 500 && map > 50 && stft > 8) { scorePenalties += 20; updateRuleUI('vacleak', 'red', 'Posible fuga de vacío (Alto MAP y STFT en ralentí).', true); }
+          else if (rpm > 500) { updateRuleUI('vacleak', 'green', 'Múltiple de admisión hermético. Sin fugas.'); }
+          else { updateRuleUI('vacleak', 'gray', 'Motor apagado.'); }
+      } else { updateRuleUI('vacleak', 'gray', 'Sin dato.'); }
+
+      if (rpm != null && load != null && ve != null) {
+          if (rpm > 4000 && load > 80 && ve < 70) { scorePenalties += 15; updateRuleUI('airfilter', 'red', 'Eficiencia baja en alta demanda. Revisar filtro.', true); }
+          else if (rpm > 4000) { updateRuleUI('airfilter', 'green', 'Caudal de aire limpio y sin restricciones en alta.'); }
+          else { updateRuleUI('airfilter', 'gray', 'Esperando altas RPM...', false); }
+      } else { updateRuleUI('airfilter', 'gray', 'Sin dato.'); }
+
+      if (tps != null && rpm != null && speed != null) { if (tps > 70 && rpm < 2000 && speed > 20) { updateRuleUI('tps', 'red', 'Cuerpo aceleración trabado o lento.', true); scorePenalties+=20;} else { updateRuleUI('tps', 'green', 'Apertura de mariposa y respuesta motor acordes.'); } } else { updateRuleUI('tps', 'gray', 'Sin dato.'); }
+      if (tps != null && rpm != null && map != null) { if (tps < 5 && rpm > 500 && rpm < 1200 && map > 65) { updateRuleUI('vacuum', 'yellow', 'Bajo vacío mecánico en ralentí.', true); scorePenalties+=15;} else { updateRuleUI('vacuum', 'green', 'Fuerza de succión/vacío normal en ralentí.'); } } else { updateRuleUI('vacuum', 'gray', 'Sin dato.'); }
+      if (rpm != null && load != null && maf != null) { if (rpm > 3000 && load > 70 && maf < 15) { updateRuleUI('maf', 'red', 'Lectura MAF críticamente baja.', true); scorePenalties+=25;} else { updateRuleUI('maf', 'green', 'Lecturas del caudalímetro lógicas respecto a la carga.'); } } else { updateRuleUI('maf', 'gray', 'Sin dato.'); }
+      if (rpm != null && map != null && speed != null) { if (rpm > 4000 && map > 95 && speed < 30) { updateRuleUI('exhaust', 'red', 'Alta contrapresión interna. Posible catalizador tapado.', true); scorePenalties+=20;} else { updateRuleUI('exhaust', 'green', 'Descarga de gases de escape libre.'); } } else { updateRuleUI('exhaust', 'gray', 'Sin dato.'); }
+      
+      // Nuevos Aire y Admisión
+      if (speed != null && tps != null && rpm != null && coolant != null) {
+          if (speed === 0 && tps < 2 && rpm > 1200 && coolant > 75) { scorePenalties += 15; updateRuleUI('iac', 'red', 'Ralentí demasiado alto en caliente. Válvula IAC trabada.', true); }
+          else if (speed === 0 && tps < 2 && coolant > 75) { updateRuleUI('iac', 'green', 'Válvula de marcha mínima operando de forma correcta.'); }
+          else { updateRuleUI('iac', 'gray', 'Requiere motor caliente y detenido.'); }
+      } else { updateRuleUI('iac', 'gray', 'Sin dato.'); }
+
+      if (load != null && rpm != null && map != null) {
+          if (load > 80 && rpm > 3000 && map < 70) { scorePenalties += 20; updateRuleUI('intakeleak', 'red', 'Fuga grave en admisión (Bajo MAP en alta carga).', true); }
+          else if (load > 80 && rpm > 3000) { updateRuleUI('intakeleak', 'green', 'Estanqueidad perfecta en múltiple bajo gran presión.'); }
+          else { updateRuleUI('intakeleak', 'gray', 'Requiere aceleración fuerte.'); }
+      } else { updateRuleUI('intakeleak', 'gray', 'Sin dato.'); }
+
+      if (speed != null && tps != null && pedal != null) {
+          if (speed === 0 && pedal < 1 && tps > 1 && tps < 5) { scorePenalties += 10; updateRuleUI('tbdirty', 'yellow', 'Mariposa levemente abierta sin pisar pedal. Necesita limpieza.', true); }
+          else if (speed === 0 && pedal < 1 && tps <= 1) { updateRuleUI('tbdirty', 'green', 'Cierre de cuerpo de aceleración impecable (0%).'); }
+          else { updateRuleUI('tbdirty', 'gray', 'Requiere soltar pedal en reposo completo.'); }
+      } else { updateRuleUI('tbdirty', 'gray', 'Sin dato.'); }
+
+      if (speed != null && load != null && avance != null && coolant != null) {
+          if (speed > 60 && load > 30 && load < 60 && avance < 5 && coolant > 90) { scorePenalties += 10; updateRuleUI('egr', 'yellow', 'Cámara recalentada (Avance bajo en crucero). Posible obstrucción EGR.', true); }
+          else if (speed > 60 && load > 30 && load < 60) { updateRuleUI('egr', 'green', 'Combustión fresca y estable en régimen de crucero.'); }
+          else { updateRuleUI('egr', 'gray', 'Requiere velocidad de crucero constante.'); }
+      } else { updateRuleUI('egr', 'gray', 'Sin dato.'); }
+
+
+      // --- MÓDULO ELÉCTRICO Y TÉRMICO (10 reglas) ---
+      if (voltage != null) { if (voltage > 15.2) { updateRuleUI('voltsurge', 'red', '¡PELIGRO ECU! Sobretensión (>15.2v).', true); scorePenalties+=50;} else { updateRuleUI('voltsurge', 'green', 'Tensión eléctrica dentro del rango seguro.'); } } else { updateRuleUI('voltsurge', 'gray', 'Sin dato.'); }
+      if (rpm != null && voltage != null) { if (rpm > 1000 && voltage < 12.8) { updateRuleUI('alt', 'red', 'El alternador no suple la demanda.', true); scorePenalties+=25;} else if (rpm > 1000 && voltage >= 12.8 && voltage <= 14.8) { updateRuleUI('alt', 'green', 'Generación de carga perfecta (13.5v - 14.8v).'); } else if (rpm > 1000 && voltage > 14.8) { updateRuleUI('alt', 'yellow', 'Sobrecarga leve.'); } else { updateRuleUI('alt', 'gray', 'Esperando aceleración.'); } } else { updateRuleUI('alt', 'gray', 'Sin dato.'); }
+      if (speed != null && coolant != null && rpm != null) { if (speed > 70 && coolant < 75 && rpm > 2000) { updateRuleUI('thermo', 'yellow', 'No alcanza temperatura de trabajo. Termostato trabado abierto.', true); scorePenalties+=15;} else { updateRuleUI('thermo', 'green', 'Estabilidad térmica excelente en carretera.'); } } else { updateRuleUI('thermo', 'gray', 'Sin dato.'); }
+      if (coolant != null) { if (coolant <= -20 || coolant >= 130) { updateRuleUI('ect', 'red', 'Lectura imposible (-20/130). Sensor o cable cortado.', true); scorePenalties+=40;} else { updateRuleUI('ect', 'green', 'Rango del sensor de temperatura confiable.'); } } else { updateRuleUI('ect', 'gray', 'Sin dato.'); }
+      if (speed != null && coolant != null && rpm != null) { if (speed < 5 && coolant > 105 && rpm > 500) { updateRuleUI('fan', 'red', 'Sobrecalentando en tráfico. Electroventilador apagado.', true); scorePenalties+=35;} else { updateRuleUI('fan', 'green', 'Control térmico y ventilación correcta en ralentí.'); } } else { updateRuleUI('fan', 'gray', 'Sin dato.'); }
+
+      // Nuevos Eléctrico y Térmico
+      if (rpm != null && voltage != null) {
+          if (rpm > 1000 && voltage < 12.0) { scorePenalties += 25; updateRuleUI('battdrop', 'red', 'Caída de voltaje extrema con motor en giro activo.', true); }
+          else if (rpm > 1000 && voltage >= 13.0) { updateRuleUI('battdrop', 'green', 'Sostenimiento de tensión y capacidad de reserva adecuada.'); }
+          else { updateRuleUI('battdrop', 'gray', 'Requiere motor girando.'); }
+      } else { updateRuleUI('battdrop', 'gray', 'Sin dato.'); }
+
+      if (coolant != null) {
+          if (coolant >= 110 && coolant < 130) { scorePenalties += 40; updateRuleUI('overheat', 'red', '¡PELIGRO! Temperatura crítica (>110°C). Apague de inmediato.', true); }
+          else if (coolant > 100 && coolant < 110) { scorePenalties += 15; updateRuleUI('overheat', 'yellow', 'Temperatura elevada del refrigerante. Modere el manejo.', true); }
+          else if (coolant > 70 && coolant <= 100) { updateRuleUI('overheat', 'green', 'Temperatura del refrigerante completamente bajo control.'); }
+          else { updateRuleUI('overheat', 'gray', 'Motor aún frío o calentando.'); }
+      } else { updateRuleUI('overheat', 'gray', 'Sin dato.'); }
+
+      if (coolant != null && rpm != null) {
+          if (coolant < 50 && rpm > 3500) { scorePenalties += 15; updateRuleUI('coldstart', 'yellow', 'Aceleración fuerte con motor frío. Riesgo de desgaste interno.', true); }
+          else if (coolant < 50 && rpm < 2500) { updateRuleUI('coldstart', 'green', 'Régimen conservador adecuado para la fase de calentamiento.'); }
+          else { updateRuleUI('coldstart', 'gray', 'Motor ya alcanzó la temperatura operativa.'); }
+      } else { updateRuleUI('coldstart', 'gray', 'Sin dato.'); }
+
+      if (rpm != null && voltage != null) {
+          if (rpm > 3500 && voltage < 13.0) { scorePenalties += 15; updateRuleUI('vbelt', 'yellow', 'El alternador pierde carga a altas RPM. Posible correa patinando.', true); }
+          else if (rpm > 3500 && voltage >= 13.5) { updateRuleUI('vbelt', 'green', 'Tracción de correa de accesorios firme ante alta revolución.'); }
+          else { updateRuleUI('vbelt', 'gray', 'Requiere un régimen de aceleración alto.'); }
+      } else { updateRuleUI('vbelt', 'gray', 'Sin dato.'); }
+
+      if (rpm != null && voltage != null && stft != null) {
+          if (rpm < 1000 && voltage < 12.5 && Math.abs(stft) > 10) { scorePenalties += 15; updateRuleUI('ground', 'yellow', 'Bajo voltaje alterando señales inyección. Revisar tierras.', true); }
+          else if (rpm < 1000 && voltage > 13.0) { updateRuleUI('ground', 'green', 'Alimentación sólida para electrónica vital del motor.'); }
+          else { updateRuleUI('ground', 'gray', 'Evaluación de estabilizador en bajas RPM.'); }
+      } else { updateRuleUI('ground', 'gray', 'Sin dato.'); }
+
+
+      // Alerta y Score Controlado
+      if (alertMsg && !appState.confirmedFaultsLog.find(f => f.desc === alertMsg && (Date.now() - f.timestamp < 10000))) {
+        triggerAIAlert("Scanner IA Activo", alertMsg); registerAuditFault(alertMsg, alertType); chartVerticalEvents.push(29);
+      }
+      
+      let historialPenalty = Math.min(15, appState.confirmedFaultsLog.length * 3);
+      globalHealthScore = Math.max(0, Math.min(100, 100 - (scorePenalties + historialPenalty)));
+      updateHealthGauge(globalHealthScore);
+    }
+
+    function updateHealthGauge(score) {
+      if(document.getElementById('needle-health').classList.contains('needle-sweep')) return;
+      if(isNaN(score)) score = 100;
+      let clampedScore = Math.max(0, Math.min(100, score));
+      document.getElementById('needle-health').style.transform = `rotate(${-135 + (clampedScore / 100) * 270}deg)`;
+      document.getElementById('health-score-val').textContent = `Score: ${clampedScore.toFixed(0)}/100`;
+      let newState = 'Excelente', stateColor = 'text-emerald-400';
+      if (clampedScore < 30) { newState = 'Fallo'; stateColor = 'text-rose-500'; } else if (clampedScore < 60) { newState = 'Revisar'; stateColor = 'text-amber-500'; } else if (clampedScore < 85) { newState = 'Óptimo'; stateColor = 'text-lime-400'; }
+      document.getElementById('health-status-text').textContent = newState; document.getElementById('health-status-text').className = `text-lg font-display font-bold ${stateColor} tracking-wider shadow-black drop-shadow-xl uppercase`;
+    }
+
+    function triggerAIAlert(title, text) {
+      const b = document.getElementById('ai-alert-banner'); document.querySelector('#ai-alert-banner h4').textContent = title; document.getElementById('ai-alert-text').textContent = text;
+      b.classList.remove('-translate-y-10', 'opacity-0', 'invisible'); b.classList.add('translate-y-4', 'opacity-100', 'visible');
+      speakText("Alerta del sistema experto. " + text);
+      setTimeout(() => { b.classList.remove('translate-y-4', 'opacity-100', 'visible'); b.classList.add('-translate-y-10', 'opacity-0', 'invisible'); }, 6000);
+    }
+
+    function registerAuditFault(desc, type) { 
+        appState.confirmedFaultsLog.unshift({ time: new Date().toLocaleTimeString(), desc, type, timestamp: Date.now() }); 
+        saveUserData(); renderAuditLog(); 
+    }
+    function renderAuditLog() {
+      const c = document.getElementById('audit-log-list'); c.innerHTML = '';
+      if(!appState.confirmedFaultsLog || appState.confirmedFaultsLog.length === 0) { c.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Bitácora limpia.</p>'; return; }
+      appState.confirmedFaultsLog.forEach((i) => {
+        c.innerHTML += `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-start justify-between shadow-lg"><div class="flex items-start space-x-3"><div><p class="text-xs font-bold text-white">${i.desc}</p><span class="text-[10px] text-slate-500 font-mono-tech mt-1 block">${i.time}</span></div></div></div>`;
+      });
+    }
+    function clearAuditLog() { appState.confirmedFaultsLog = []; saveUserData(); renderAuditLog(); showToast('Bitácora borrada.', 'success'); updateHealthGauge(100); }
+
+    // --- FUNCIÓN NÚCLEO ALIMENTADA POR DEMO, BLUETOOTH O REPETICIÓN ---
+    function updateTelemetryPro(rawData) {
+      const data = calculateVirtualPIDs(rawData); 
+      currentLiveData = { ...currentLiveData, ...data };
+      
+      // Chequeo de Alarmas Custom (Novedad conectada)
+      if (appState.customAlarms && appState.customAlarms.length > 0) {
+          appState.customAlarms.forEach(al => {
+             let val = currentLiveData[al.p1];
+             if (val != null) {
+                 let triggered = false;
+                 if (al.o1 === '>' && val > al.v1) triggered = true;
+                 if (al.o1 === '<' && val < al.v1) triggered = true;
+                 if (triggered && !faultFired['al_'+al.id]) {
+                     showToast(`¡Alarma! ${al.p1.toUpperCase()} es ${val.toFixed(1)}`, 'warning');
+                     speakText(`Alarma. ${al.p1} fuera de límite.`);
+                     faultFired['al_'+al.id] = true;
+                     setTimeout(() => { faultFired['al_'+al.id] = false; }, 30000); // Se rearma en 30s
+                 }
+             }
+          });
+      }
+
+      if (isConnected && currentProfile !== 'demo' && !isReplayMode) {
+          if(Date.now() - lastRecordTick > 1000) { liveTripRecording.push(JSON.parse(JSON.stringify(currentLiveData))); lastRecordTick = Date.now(); }
+      }
+
+      if (data.rpm != null) { document.getElementById('val-rpm').textContent = currentLiveData.rpm.toFixed(0); document.getElementById('needle-rpm').style.transform = `rotate(${-120 + (Math.min(currentLiveData.rpm, 6000) / 6000) * 240}deg)`; }
+      if (data.speed != null) { document.getElementById('val-speed').textContent = currentLiveData.speed.toFixed(0); document.getElementById('needle-speed').style.transform = `rotate(${-120 + (Math.min(currentLiveData.speed, 240) / 240) * 240}deg)`; }
+
+      if (crossChart) {
+        chartVerticalEvents = chartVerticalEvents.map(v => v - 1).filter(v => v >= 0);
+        Object.keys(datasetConfig).forEach(k => {
+          const cfg = datasetConfig[k]; let val = currentLiveData[k] || 0; let normalized = 0;
+          if (k === 'avance') normalized = ((val + 20) / cfg.max) * 100;
+          else if (k === 'stft' || k === 'ltft') normalized = ((val + 25) / cfg.max) * 100;
+          else normalized = (val / cfg.max) * 100;
+          crossChart.data.datasets[cfg.idx].data.push(normalized); crossChart.data.datasets[cfg.idx].data.shift(); crossChart.data.datasets[cfg.idx].currentRawValue = val;
+        }); crossChart.update();
+      }
+      
+      if(document.getElementById('calc-hp')) document.getElementById('calc-hp').textContent = currentLiveData.hp != null ? currentLiveData.hp : '--'; 
+      if(document.getElementById('calc-torque')) document.getElementById('calc-torque').textContent = currentLiveData.torque != null ? currentLiveData.torque : '--';
+      if(document.getElementById('calc-afr')) document.getElementById('calc-afr').textContent = currentLiveData.afr != null ? currentLiveData.afr.toFixed(1) : '14.7';
+      if(document.getElementById('ind-val-load')) document.getElementById('ind-val-load').textContent = currentLiveData.load != null ? `${currentLiveData.load.toFixed(0)}` : '--'; 
+      if(document.getElementById('val-stft-dash')) document.getElementById('val-stft-dash').textContent = currentLiveData.stft != null ? `${currentLiveData.stft.toFixed(1)}` : '--';
+      if(document.getElementById('val-o2-dash')) document.getElementById('val-o2-dash').textContent = currentLiveData.o2 != null ? `${currentLiveData.o2.toFixed(2)}` : '--'; 
+      if(document.getElementById('val-map-dash')) document.getElementById('val-map-dash').textContent = currentLiveData.map != null ? `${currentLiveData.map.toFixed(0)}` : '--';
+      if(document.getElementById('val-maf-dash')) document.getElementById('val-maf-dash').textContent = currentLiveData.maf != null ? `${currentLiveData.maf.toFixed(1)}` : '--';
+      
+      if (goldenMasterSession) {
+          const updateDiffUI = (id, currentVal, baseVal, reverseColor = false) => {
+              const el = document.getElementById(`diff-${id}`);
+              if(!el || currentVal == null || baseVal == null) return;
+              let diff = currentVal - baseVal; el.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1);
+              if (Math.abs(diff) < 2) el.className = `text-[9px] font-bold ml-1 text-slate-500`; 
+              else if (diff > 5) el.className = `text-[9px] font-bold ml-1 ${reverseColor ? 'text-emerald-400' : 'text-rose-400'}`;
+              else if (diff < -5) el.className = `text-[9px] font-bold ml-1 ${reverseColor ? 'text-rose-400' : 'text-emerald-400'}`;
+              else el.className = `text-[9px] font-bold ml-1 text-amber-400`;
+          };
+          updateDiffUI('load', currentLiveData.load, goldenMasterSession.data.load); updateDiffUI('stft', currentLiveData.stft, goldenMasterSession.data.stft);
+          updateDiffUI('map', currentLiveData.map, goldenMasterSession.data.map); updateDiffUI('maf', currentLiveData.maf, goldenMasterSession.data.maf, true);
+      }
+
+      processAnalyticsModules(currentLiveData); runHealthScanner(currentLiveData);
+    }
+
+    function processAnalyticsModules(data) {
+      const now = Date.now(); const deltaHours = (now - lastTime) / 3600000; lastTime = now;
+      let l100km = 0, litersPerHour = 0; if (data.maf > 0) litersPerHour = (data.maf * 3600) / (14.7 * 730);
+      if (data.speed > 5) { l100km = (litersPerHour / data.speed) * 100; tripDistanceKm += data.speed * deltaHours; tripFuelLiters += litersPerHour * deltaHours; }
+      document.getElementById('stat-l100').textContent = l100km > 0 && l100km < 99 ? l100km.toFixed(1) : "0.0";
+      const fuelPrice = parseFloat(document.getElementById('input-fuel-price').value) || 0; document.getElementById('stat-cost-km').textContent = ((l100km / 100) * fuelPrice).toFixed(2); document.getElementById('stat-trip-cost').textContent = (tripFuelLiters * fuelPrice).toFixed(2);
+      const v = data.voltage || 12.0; 
+      // Si la UI del modulo eléctrico existiera aquí (removido para compatibilidad general previa), lo actualizaríamos.
+    }
+
+    function toggleDemoMode() {
+      if (isConnected) return showToast('Desconecta el Bluetooth primero.', 'warning');
+      if (isReplayMode) return showToast('Detén la repetición primero.', 'warning');
+
+      isDemoMode = !isDemoMode; const btn = document.getElementById('btn-demo');
+      if (isDemoMode) {
+        btn.classList.add('bg-amber-500', 'text-slate-950'); demoTicks = 0; faultFired = {}; triggerNeedleSweep(); showToast('Simulador Iniciado.', 'success');
+        document.getElementById('connection-status-text').textContent = "Conectado al Simulador (Demo)";
+        document.getElementById('status-dot').className = "w-3 h-3 rounded-full bg-amber-500"; document.getElementById('status-ping').className = "absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-75";
+        
+        demoInterval = setInterval(() => {
+          demoTicks++;
+          let d = { rpm: 0, speed: 0, coolant: 90, voltage: 12.4, load: 0, tps: 0, pedal: 0, avance: 15, map: 30, maf: null, o2: 0.1, stft: 0, ltft: 2, baro: 101 };
+          if(demoTicks < 15) { d.voltage=12.6; d.map=101; } else if(demoTicks >= 15 && demoTicks < 20) { d.rpm=250; d.voltage=9.1; d.map=80; d.load=100; }
+          else {
+            d.rpm = Math.floor(900 + Math.abs(Math.sin(demoTicks / 20)) * 4000); d.speed = Math.floor((d.rpm / 3000) * 80); d.voltage = 13.9 + Math.random() * 0.3; d.pedal = (d.rpm / 6000) * 100; d.tps = d.pedal; d.load = Math.floor(20 + Math.random() * 30 + (d.rpm / 150)); d.map = 35 + (d.tps * 0.6); d.o2 = (demoTicks % 4 === 0) ? 0.15 : 0.85; d.stft = Math.sin(demoTicks / 5) * 3; d.avance = 15 + (d.rpm / 200) - (d.load / 5);
+            const cycle = demoTicks % 700;
+            if (cycle > 100 && cycle < 120) { d.rpm=900; d.tps=0; d.map=75; d.stft=18; d.ltft=10; } 
+            else if (cycle > 180 && cycle < 200) { d.speed=0; d.rpm=850; d.coolant=107; d.o2=0.45; } 
+            else if (cycle > 250 && cycle < 270) { d.voltage=15.5; d.rpm=3000; } 
+            else if (cycle > 350 && cycle < 370) { d.rpm=1000; d.map=65; d.stft=15; } 
+          }
+          updateTelemetryPro(d);
+        }, 300);
+      } else {
+        btn.classList.remove('bg-amber-500', 'text-slate-950'); clearInterval(demoInterval); 
+        document.getElementById('connection-status-text').textContent = `Desconectado | Perfil: ${currentProfile}`;
+        document.getElementById('status-dot').className = "w-3 h-3 rounded-full bg-rose-500"; document.getElementById('status-ping').className = "absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75";
+        updateTelemetryPro({ rpm: null, speed: null, voltage: null, map: null, maf: null, tps: null, load: null, pedal:null, avance:null, o2:null, stft:null, coolant:null, ve:null, hp:null, torque:null, afr:null }); showToast('Simulador detenido.', 'info');
+      }
+    }
+
+    // ----------------------------------------------------
+    // GRABACIÓN DE SESIONES Y REPETICIÓN
+    // ----------------------------------------------------
+    function saveCurrentSession() { 
+       if(currentProfile === 'demo') return showToast('No se puede guardar en Modo Demo.', 'error');
+       const newSession = { id: Date.now(), name: `Sesión ${new Date().toLocaleTimeString()}`, data: { ...currentLiveData }, frames: [...liveTripRecording], isGolden: appState.savedSessions.length === 0 };
+       appState.savedSessions.push(newSession); 
+       if(appState.savedSessions.length > 5) appState.savedSessions.shift();
+       saveUserData(); liveTripRecording = []; renderSessionsList(); showToast('Sesión y Viaje guardados con éxito', 'success'); 
+    }
+
+    function renderSessionsList() { 
+       const c = document.getElementById('sessions-list-container'); c.innerHTML = ''; 
+       if (appState.savedSessions.length === 0) { c.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No hay sesiones guardadas.</p>'; return; }
+       appState.savedSessions.forEach((s, idx) => { 
+           const isRecent = idx >= appState.savedSessions.length - 2; 
+           c.innerHTML += `
+           <div class="bg-slate-900 border ${s.isGolden ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-700'} p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center shadow-lg gap-3">
+               <div><span class="font-bold text-sm ${s.isGolden ? 'text-indigo-400' : 'text-white'} block">${s.name}</span><span class="text-[9px] text-slate-400 font-mono-tech block mt-1">${s.frames && s.frames.length > 0 ? s.frames.length + ' cuadros grabados' : 'Sin datos de viaje'}</span></div>
+               <div class="flex gap-2">
+                   <button onclick="setGoldenMaster(${s.id})" class="px-3 py-1.5 bg-slate-800 text-indigo-400 font-bold rounded-lg text-[10px] border border-slate-700">FIJAR BASE</button>
+                   ${s.frames && s.frames.length > 0 && isRecent ? `<button onclick="startReplay(${s.id})" class="px-3 py-1.5 bg-sky-600 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shadow-lg shadow-sky-600/20"><i data-lucide="play-circle" class="w-3 h-3"></i> REPETIR</button>` : ''}
+               </div>
+           </div>`; 
+       }); lucide.createIcons();
+    }
+
+    function setGoldenMaster(id) { 
+        appState.savedSessions.forEach(s => s.isGolden = (s.id === id)); goldenMasterSession = appState.savedSessions.find(s => s.id === id);
+        document.getElementById('baseline-name').textContent = goldenMasterSession.name; document.querySelectorAll('[id^="diff-"]').forEach(el => el.textContent = '');
+        saveUserData(); renderSessionsList(); showToast('Línea Base fijada para comparativas', 'info'); 
+    }
+
+    function startReplay(id) {
+        if (isConnected) return showToast('Desconecta el Bluetooth primero.', 'warning');
+        if (isDemoMode) toggleDemoMode();
+        const session = appState.savedSessions.find(s => s.id === id);
+        if (!session || !session.frames || session.frames.length === 0) return showToast('Esta sesión no tiene grabación.', 'error');
+
+        isReplayMode = true; document.getElementById('replay-banner').classList.remove('hidden'); switchTab('dashboard'); showToast('Iniciando repetición del viaje...', 'success');
+
+        let frameIdx = 0;
+        replayInterval = setInterval(() => {
+            if (frameIdx >= session.frames.length) { stopReplay("Fin de la repetición del viaje."); return; }
+            updateTelemetryPro(session.frames[frameIdx]); frameIdx++;
+        }, 1000);
+    }
+
+    function stopReplay(msg = "Repetición detenida.") {
+        clearInterval(replayInterval); isReplayMode = false; document.getElementById('replay-banner').classList.add('hidden'); showToast(msg, 'info');
+        updateTelemetryPro({ rpm: null, speed: null, load: null, map: null, maf: null, hp: null, torque: null, ve: null, afr: null }); 
+    }
+
+    // ----------------------------------------------------
+    // ASISTENTE DE VOZ Y RUTINAS DE TEST (10 POR CADA MODO)
+    // ----------------------------------------------------
+    const VOICE_TESTS = {
+       parked: {
+          name: "Modo Estacionado",
+          steps: [
+             { text: "Encienda el motor y manténgalo en ralentí sin acelerar.", condition: (d) => d.rpm != null && d.rpm > 500 && d.rpm < 1200 },
+             { text: "Acelere suavemente y mantenga en 2500 RPM.", condition: (d) => d.rpm != null && d.rpm >= 2000 && d.rpm <= 3000 },
+             { text: "Acelere bruscamente hasta 4000 RPM por un momento.", condition: (d) => d.rpm != null && d.rpm >= 3500 && d.rpm <= 4800 },
+             { text: "Suelte el acelerador y deje que las RPM bajen al mínimo absoluto.", condition: (d) => d.rpm != null && d.rpm < 1200 },
+             { text: "Encienda luces altas y el aire acondicionado para evaluar carga eléctrica.", condition: (d) => (d.voltage != null && d.voltage < 14.2) || (d.load != null && d.load > 25 && d.speed === 0) },
+             { text: "Pise el pedal del freno a fondo varias veces repetidamente.", condition: (d) => d.map != null && d.map > 35 && d.rpm != null && d.rpm < 1200 },
+             { text: "Gire el volante a un extremo y mantenga tensión.", condition: (d) => d.load != null && d.load > 30 && d.rpm != null && d.rpm < 1200 },
+             { text: "Mantenga RPM en 1500 constantes para prueba de ciclo de sondas.", condition: (d) => d.rpm != null && d.rpm >= 1300 && d.rpm <= 1700 },
+             { text: "Deje el vehículo en ralentí puro hasta alcanzar temperatura ideal (90°C).", condition: (d) => d.coolant != null && d.coolant >= 85 && d.speed === 0 },
+             { text: "Apague el motor completamente y deje la llave en contacto (Modo ON).", condition: (d) => d.rpm != null && d.rpm === 0 && d.voltage != null && d.voltage > 11.5 }
+          ]
+       },
+       city: {
+          name: "Modo Ciudad",
+          steps: [
+             { text: "Inicie la marcha despacio y alcance los 30 KM/H.", condition: (d) => d.speed != null && d.speed >= 25 && d.speed <= 40 },
+             { text: "Mantenga la velocidad constante en 40 KM/H.", condition: (d) => d.speed != null && d.speed >= 35 && d.speed <= 45 },
+             { text: "Frene por completo hasta detener el vehículo totalmente.", condition: (d) => d.speed != null && d.speed === 0 },
+             { text: "Realice una aceleración muy suave y ecológica desde 0 hasta 20 KM/H.", condition: (d) => d.speed != null && d.speed >= 15 && d.speed <= 25 && d.tps != null && d.tps < 35 },
+             { text: "Acelere de forma agresiva y rápida hasta los 50 KM/H.", condition: (d) => d.speed != null && d.speed >= 45 && d.tps != null && d.tps > 45 },
+             { text: "Conduzca a muy baja velocidad (10 KM/H) simulando tráfico pesado.", condition: (d) => d.speed != null && d.speed >= 5 && d.speed <= 15 },
+             { text: "Use freno de motor (bajar marchas) sin tocar el pedal de freno.", condition: (d) => d.speed != null && d.speed > 20 && d.speed < 40 && d.tps != null && d.tps < 5 && d.rpm != null && d.rpm > 1800 },
+             { text: "Alcance y mantenga 50 KM/H continuos por varios segundos.", condition: (d) => d.speed != null && d.speed >= 45 && d.speed <= 55 },
+             { text: "Acelere a fondo de imprevisto para un rebase simulado hasta 60 KM/H.", condition: (d) => d.speed != null && d.speed >= 58 && d.tps != null && d.tps > 55 },
+             { text: "Deténgase suavemente en un semáforo imaginario y mantenga el ralentí.", condition: (d) => d.speed != null && d.speed === 0 && d.rpm != null && d.rpm < 1200 }
+          ]
+       },
+       highway: {
+          name: "Modo Ruta",
+          steps: [
+             { text: "Incorpórese a la autopista acelerando decididamente hasta 80 KM/H.", condition: (d) => d.speed != null && d.speed >= 75 },
+             { text: "Aumente el ritmo hasta alcanzar la velocidad de crucero de 100 KM/H.", condition: (d) => d.speed != null && d.speed >= 95 && d.speed <= 105 },
+             { text: "Mantenga la velocidad para estabilizar el consumo y la temperatura.", condition: (d) => d.speed != null && d.speed >= 90 && d.speed <= 110 },
+             { text: "Realice un sobrepaso en marcha larga acelerando hasta 120 KM/H.", condition: (d) => d.speed != null && d.speed >= 115 && d.tps != null && d.tps > 50 },
+             { text: "Vuelva a la velocidad de crucero (100 KM/H) con bajo consumo y pedal suelto.", condition: (d) => d.speed != null && d.speed >= 90 && d.speed <= 105 && d.tps != null && d.tps < 35 },
+             { text: "Suelte por completo el acelerador y deje que el vehículo pierda velocidad por inercia.", condition: (d) => (d.tps == null || d.tps < 5) && d.rpm != null && d.rpm > 1500 && d.speed != null && d.speed > 70 },
+             { text: "Frene progresivamente simulando una salida en curva hasta 60 KM/H.", condition: (d) => d.speed != null && d.speed <= 65 && d.speed >= 50 && d.tps != null && d.tps < 5 },
+             { text: "Acelere nuevamente desde 60 KM/H hasta 90 KM/H exigiéndolo en alta marcha.", condition: (d) => d.speed != null && d.speed >= 85 && d.speed <= 95 && d.load != null && d.load > 60 },
+             { text: "Conduzca a marcha de relax constante monitoreando térmicos (80 KM/H).", condition: (d) => d.speed != null && d.speed >= 75 && d.speed <= 85 },
+             { text: "Desacelere progresivamente y detenga el vehículo por completo en la banquina.", condition: (d) => d.speed != null && d.speed === 0 }
+          ]
+       }
+    };
+
+    let voiceEnabled = true; let currentVoiceTest = null, currentTestStep = 0, currentTestErrors = 0;
+
+    function initSpeechSynthesis() { 
+        if ('speechSynthesis' in window) { 
+            window.speechSynthesis.getVoices(); 
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices(); 
+        } 
+    }
+    function speakText(text) { 
+        if (!voiceEnabled || !('speechSynthesis' in window)) return; 
+        try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 0.95; u.lang = 'es-ES'; window.speechSynthesis.speak(u); } 
+        catch (e) { console.error(e); } 
+    }
+    function toggleVoiceAssistance() { 
+        voiceEnabled = !voiceEnabled; document.getElementById('voice-icon').className = `w-4 h-4 ${voiceEnabled ? 'text-sky-400' : 'text-slate-600'}`; 
+        showToast(voiceEnabled ? 'Voz activada' : 'Voz silenciada'); if(voiceEnabled) speakText("Asistente de voz activado."); 
+    }
+    
+    function startVoiceTest(modeId) { 
+       currentVoiceTest = VOICE_TESTS[modeId]; currentTestStep = 0; currentTestErrors = 0;
+       document.getElementById('voicetest-selector').classList.add('hidden'); document.getElementById('voicetest-active').classList.remove('hidden');
+       renderVoiceTestStep();
+    }
+    function renderVoiceTestStep() {
+       const stepObj = currentVoiceTest.steps[currentTestStep];
+       document.getElementById('test-step-counter').textContent = `Paso ${currentTestStep + 1} de ${currentVoiceTest.steps.length}`;
+       document.getElementById('test-instruction-text').textContent = stepObj.text; speakText(stepObj.text);
+    }
+    function confirmCurrentTestStep() { 
+       const stepObj = currentVoiceTest.steps[currentTestStep];
+       if (isConnected || isDemoMode || isReplayMode) {
+          if(!stepObj.condition(currentLiveData)) { currentTestErrors++; showToast('Condición telemétrica no cumplida. Registrando desvío...', 'warning'); } 
+          else { showToast('Paso completado correctamente.', 'success'); }
+       }
+       currentTestStep++; if(currentTestStep >= currentVoiceTest.steps.length) finishVoiceTest(); else renderVoiceTestStep();
+    }
+    function finishVoiceTest() {
+       let resultMsg = currentTestErrors === 0 ? "Excelente. El vehículo respondió perfectamente a las exigencias y demandas de la prueba." : `Aceptable. Hubo ${currentTestErrors} lectura(s) donde la ECU no reflejó el comportamiento ideal o esperado.`;
+       speakText(`Prueba finalizada. ${resultMsg}`);
+       if (currentProfile !== 'demo') {
+           appState.testResultsLog.unshift({ name: currentVoiceTest.name, result: resultMsg, time: new Date().toLocaleString() });
+           saveUserData(); renderTestResults();
+       } stopVoiceTest(); 
+    }
+    function stopVoiceTest(msg = null) { 
+       currentVoiceTest = null; document.getElementById('voicetest-active').classList.add('hidden'); document.getElementById('voicetest-selector').classList.remove('hidden');
+       if(msg) { speakText(msg); showToast(msg, 'info'); }
+    }
+    function renderTestResults() {
+       const c = document.getElementById('test-results-list');
+       if(!appState.testResultsLog || appState.testResultsLog.length === 0) { c.innerHTML = ''; return; }
+       c.innerHTML = '<h3 class="text-xs font-mono-tech text-slate-400 uppercase mt-6 mb-2 border-b border-slate-800 pb-2">Historial de Tests</h3>' + 
+       appState.testResultsLog.map(t => `<div class="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow-lg"><div class="flex justify-between items-center"><h4 class="font-bold text-sky-400 text-sm">${t.name}</h4><span class="text-[9px] text-slate-500 font-mono-tech">${t.time}</span></div><p class="text-xs text-slate-300 mt-2">${t.result}</p></div>`).join('');
+    }
+
+    // ----------------------------------------------------
+    // BLUETOOTH OBD2 REAL Y FILTRO ANTI-FANTASMAS (DTC)
+    // ----------------------------------------------------
+    function handleBleNotification(event) {
+      const value = event.target.value; const str = new TextDecoder('utf-8').decode(value); obdBuffer += str;
+      if (obdBuffer.includes('>')) {
+        const fullResponse = obdBuffer; obdBuffer = ''; 
+        if (pendingCommandResolve) { pendingCommandResolve(fullResponse); pendingCommandResolve = null; } else { processOBDResponse(fullResponse); }
+      }
+    }
+
+    function processOBDResponse(response) {
+      const cleanRes = response.replace(/\s/g, '').replace(/>/g, '').replace(/\r/g, ''); let parsedData = {};
+      if (cleanRes.includes('410C')) { const idx = cleanRes.indexOf('410C'); const hex = cleanRes.substring(idx + 4, idx + 8); if (hex.length === 4) parsedData.rpm = parseInt(hex, 16) / 4; } 
+      else if (cleanRes.includes('410D')) { const idx = cleanRes.indexOf('410D'); const hex = cleanRes.substring(idx + 4, idx + 6); if (hex) parsedData.speed = parseInt(hex, 16); }
+      else if (cleanRes.includes('4105')) { const idx = cleanRes.indexOf('4105'); const hex = cleanRes.substring(idx + 4, idx + 6); if (hex) parsedData.coolant = parseInt(hex, 16) - 40; }
+      else if (cleanRes.includes('4104')) { const idx = cleanRes.indexOf('4104'); const hex = cleanRes.substring(idx + 4, idx + 6); if (hex) parsedData.load = (parseInt(hex, 16) * 100) / 255; }
+      else if (cleanRes.includes('4111')) { const idx = cleanRes.indexOf('4111'); const hex = cleanRes.substring(idx + 4, idx + 6); if (hex) { parsedData.tps = (parseInt(hex, 16) * 100) / 255; parsedData.pedal = parsedData.tps; } }
+      if (Object.keys(parsedData).length > 0) { updateTelemetryPro(parsedData); }
+    }
+
+    function sendOBDCommand(cmd, timeoutMs = 5000) {
+      return new Promise((resolve, reject) => {
+        if (!bleCharacteristicTx) return reject(new Error("Sin conexión Bluetooth."));
+        const timeoutId = setTimeout(() => { pendingCommandResolve = null; reject(new Error(`Timeout en comando: ${cmd}`)); }, timeoutMs);
+        pendingCommandResolve = (response) => { clearTimeout(timeoutId); resolve(response); };
+        const encoder = new TextEncoder();
+        bleCharacteristicTx.writeValue(encoder.encode(cmd + '\r')).catch(err => { clearTimeout(timeoutId); pendingCommandResolve = null; reject(err); });
+      });
+    }
+
+    async function initializeOBD() {
+      try {
+        document.getElementById('connection-status-text').textContent = "Conectado. Reseteando chip...";
+        await sendOBDCommand('ATZ', 2000); await sendOBDCommand('ATE0', 2000); await sendOBDCommand('ATL0', 2000); 
+        document.getElementById('connection-status-text').textContent = "Negociando con ECU...";
+        await sendOBDCommand('ATSP0', 2000); await sendOBDCommand('0100', 10000); 
+        const protocolRaw = await sendOBDCommand('ATDP', 3000); detectedCarProtocol = protocolRaw.replace(/>/g, '').replace(/\r/g, '').trim() || 'Protocolo Genérico';
+        
+        document.getElementById('connection-status-text').textContent = `En Línea | ${detectedCarProtocol}`;
+        document.getElementById('status-dot').className = "w-3 h-3 rounded-full bg-emerald-500"; document.getElementById('status-ping').className = "absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75";
+        return true;
+      } catch (error) { throw error; }
+    }
+
+    async function startOBDPolling() {
+      isObdPolling = true; const commands = ['010C', '010D', '0105', '0104', '0111']; 
+      while (isObdPolling) {
+        if (pausePolling) { await new Promise(r => setTimeout(r, 500)); continue; }
+        for (let cmd of commands) {
+          if (!isObdPolling || pausePolling) break;
+          try { const encoder = new TextEncoder(); await bleCharacteristicTx.writeValue(encoder.encode(cmd + '\r')); await new Promise(r => setTimeout(r, 200)); } 
+          catch (error) { console.error("Fallo de lectura en polling"); break; }
+        }
+      }
+    }
+
+    async function toggleConnectRealBluetooth() {
+      if(!currentProfile) return showToast('Por favor, selecciona un perfil.', 'error');
+      if (isReplayMode) return showToast('Detén la repetición primero.', 'warning');
+      
+      if (isConnected) { 
+        isObdPolling = false; if (bleDevice && bleDevice.gatt.connected) { bleDevice.gatt.disconnect(); }
+        isConnected = false; document.getElementById('btn-connect-text').textContent = "CONECTAR";
+        document.getElementById('connection-status-text').textContent = `Desconectado | Perfil: ${currentProfile}`;
+        document.getElementById('status-dot').className = "w-3 h-3 rounded-full bg-rose-500"; document.getElementById('status-ping').className = "absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75";
+        showToast('Adaptador OBD2 Desconectado', 'warning'); return; 
+      }
+      if (isDemoMode) toggleDemoMode(); 
+      if (!navigator.bluetooth) { showToast('Tu navegador no soporta Web Bluetooth API.', 'error'); return; }
+
+      try {
+        showToast('Buscando dispositivos OBD2...', 'info');
+        const knownServices = [ 0xFFE0, 0xFFF0, 0x18F0, '0000ffe0-0000-1000-8000-00805f9b34fb', '0000fff0-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2' ];
+        bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: knownServices.map(s => typeof s === 'string' ? s.toLowerCase() : s) });
+        showToast(`Vinculando: ${bleDevice.name || 'Dispositivo'}`, 'info');
+        
+        bleDevice.addEventListener('gattserverdisconnected', () => {
+           isConnected = false; isObdPolling = false; document.getElementById('btn-connect-text').textContent = "CONECTAR";
+           document.getElementById('connection-status-text').textContent = "Conexión Perdida"; document.getElementById('status-dot').className = "w-3 h-3 rounded-full bg-rose-500"; document.getElementById('status-ping').className = "absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-75";
+           showToast('Conexión perdida.', 'error');
+        });
+
+        const server = await bleDevice.gatt.connect(); 
+        let serviceFound = false; bleCharacteristicTx = null; bleCharacteristicRx = null;
+
+        for (const uuid of knownServices) {
+          try {
+            const service = await server.getPrimaryService(uuid); const characteristics = await service.getCharacteristics();
+            for (const char of characteristics) {
+              if (char.properties.notify || char.properties.indicate) bleCharacteristicRx = char; 
+              if (char.properties.write || char.properties.writeWithoutResponse) bleCharacteristicTx = char; 
+            }
+            if (bleCharacteristicRx && bleCharacteristicTx) { serviceFound = true; break; }
+          } catch(e) {}
+        }
+        
+        if (!serviceFound) throw new Error("Sin canales TX/RX.");
+        await bleCharacteristicRx.startNotifications(); bleCharacteristicRx.addEventListener('characteristicvaluechanged', handleBleNotification);
+        
+        await initializeOBD(); liveTripRecording = []; lastRecordTick = Date.now();
+
+        isConnected = true; document.getElementById('btn-connect-text').textContent = "DESCONECTAR"; showToast(`Conectado a ECU con éxito.`, 'success'); speakText('Enlace con la computadora del auto establecido. Telemetría en vivo.');
+        startOBDPolling(); 
+      } catch (error) { console.error(error); showToast(error.name === 'NotFoundError' ? 'Cancelado.' : 'Error Bluetooth: ' + error.message, 'error'); }
+    }
+
+    function parseDTCHex(hexString) {
+      const codes = []; if(/NODATA|ERROR|SEARCHING|STOPPED/i.test(hexString)) return codes;
+      const cleanHex = hexString.replace(/\s/g, '').replace(/>/g, ''); 
+      let startIndex = cleanHex.indexOf('43'); if (startIndex === -1) return codes; 
+      let payload = cleanHex.substring(startIndex + 2);
+
+      for (let i = 0; i < payload.length; i += 4) {
+        if (i + 4 <= payload.length) {
+          const chunk = payload.substring(i, i + 4);
+          if (chunk === '0000' || chunk === 'FFFF') continue;
+          if (!/^[0-9A-Fa-f]{4}$/.test(chunk)) continue;
+
+          const firstChar = chunk.charAt(0); let letter = 'P'; let secondChar = chunk.charAt(1); const val = parseInt(firstChar, 16);
+          if (val >= 0 && val <= 3) { letter = 'P'; secondChar = val.toString(); } else if (val >= 4 && val <= 7) { letter = 'C'; secondChar = (val - 4).toString(); } else if (val >= 8 && val <= 11) { letter = 'B'; secondChar = (val - 8).toString(); } else if (val >= 12 && val <= 15) { letter = 'U'; secondChar = (val - 12).toString(); }
+          
+          const dtcString = `${letter}${secondChar}${chunk.substring(2)}`;
+          if(dtcString === 'P0000' || dtcString === 'C0000' || dtcString === 'U0000' || dtcString === 'B0000') continue;
+          codes.push({ code: dtcString, desc: 'Detectado en la ECU. Evaluar componente.' });
+        }
+      }
+      return Array.from(new Set(codes.map(a => a.code))).map(code => codes.find(a => a.code === code));
+    }
+
+    async function scanDTCsPro() { 
+      const btn = document.getElementById('btn-scan'); const container = document.getElementById('dtc-results-container');
+      if (isDemoMode) {
+        btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin inline mr-2"></i> LEYENDO ECU...`; lucide.createIcons();
+        setTimeout(() => { 
+          container.innerHTML = `<div class="bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700"><h4 class="text-rose-400 font-bold flex justify-between">P0171 <span class="bg-rose-500/20 px-2 py-0.5 rounded text-[10px]">PENDIENTE</span></h4><p class="text-xs text-slate-300 mt-2">Sistema demasiado pobre (Banco 1)</p></div><div class="bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700 mt-2"><h4 class="text-amber-400 font-bold flex justify-between">P0300 <span class="bg-amber-500/20 px-2 py-0.5 rounded text-[10px]">HISTÓRICO</span></h4><p class="text-xs text-slate-300 mt-2">Fallo de encendido aleatorio detectado</p></div>`; 
+          btn.innerHTML = `ESCANEAR ECU`; showToast(`2 DTCs hallados (Demo).`, 'warning'); 
+        }, 1500); return;
+      }
+      if (!isConnected || !bleCharacteristicTx) { showToast('Debes conectar el escáner Bluetooth primero', 'error'); return; }
+
+      try {
+        btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin inline mr-2"></i> LEYENDO...`; lucide.createIcons();
+        pausePolling = true; container.innerHTML = `<div class="bg-slate-900/40 p-10 rounded-xl text-center border border-slate-800 text-sky-400"><p class="text-xs font-mono-tech animate-pulse">Pidiendo datos de diagnóstico (Modo 03)...</p></div>`;
+
+        const response = await sendOBDCommand('03', 10000); const codes = parseDTCHex(response);
+
+        if (codes.length === 0) {
+           container.innerHTML = `<div class="bg-emerald-900/20 p-8 rounded-xl text-center border border-emerald-900/50"><i data-lucide="check-circle-2" class="w-10 h-10 mx-auto text-emerald-500 mb-3"></i><p class="text-emerald-400 text-xs font-mono-tech font-bold">Sin códigos de falla detectados.</p></div>`; showToast('El sistema está limpio.', 'success');
+        } else {
+           container.innerHTML = ''; codes.forEach(dtc => { container.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700"><h4 class="text-rose-400 font-bold text-lg flex justify-between tracking-wider">${dtc.code} <span class="bg-rose-500/20 px-2 py-1 rounded text-[10px] text-rose-300">ACTIVO</span></h4><p class="text-xs text-slate-300 mt-2">${dtc.desc}</p></div>`; }); showToast(`Se encontraron ${codes.length} código(s).`, 'warning');
+        }
+      } catch (error) { container.innerHTML = `<div class="bg-rose-900/20 p-6 rounded-xl text-center border border-rose-900/50"><p class="text-rose-400 text-xs font-mono-tech">Error al leer: ${error.message}</p></div>`; showToast('Error de diagnóstico', 'error'); } finally { btn.innerHTML = `ESCANEAR ECU`; pausePolling = false; lucide.createIcons(); }
+    }
+    
+    async function clearDTCsPro() { 
+      const container = document.getElementById('dtc-results-container');
+      if (isDemoMode) { container.innerHTML = `<div class="bg-slate-900/40 p-10 rounded-xl text-center border border-slate-800"><p class="text-emerald-400 text-xs font-mono-tech font-bold flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Memoria limpia (Demo).</p></div>`; showToast('Check Engine apagado', 'success'); lucide.createIcons(); return; }
+      if (!isConnected || !bleCharacteristicTx) return showToast('Desconectado', 'error');
+      try {
+        pausePolling = true; showToast('Enviando comando de borrado (04)...', 'info'); await sendOBDCommand('04', 5000);
+        container.innerHTML = `<div class="bg-slate-900/40 p-10 rounded-xl text-center border border-slate-800"><p class="text-emerald-400 text-xs font-mono-tech font-bold flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Computadora Reseteada.</p></div>`; showToast('Check Engine apagado con éxito', 'success'); speakText("Memoria de errores borrada."); lucide.createIcons();
+      } catch (error) { showToast('Error borrando códigos: ' + error.message, 'error'); } finally { pausePolling = false; }
+    }
+  </script>
+</body>
+</html>
+
